@@ -1,0 +1,1 @@
+ArcadePlay image assets folder.
