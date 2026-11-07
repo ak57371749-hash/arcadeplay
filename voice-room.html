@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080a12">
+<title>ArcadePlay | Private Voice Room</title>
+<style>
+:root{--bg:#080a12;--red:#ff304b;--muted:#aaa7b5;--green:#55e79a}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% 8%,#302034,#080a12 58%);color:#fff;font-family:Arial,sans-serif}
+header{padding:20px max(18px,calc((100% - 850px)/2));background:#090a12;border-bottom:1px solid #343044}
+header a{color:white;text-decoration:none;font-weight:900;font-size:24px}header span{color:var(--red)}
+main{width:min(92%,580px);margin:34px auto}.eyebrow{text-align:center;color:#ff5269;letter-spacing:4px;font-weight:bold}
+h1{text-align:center;font-size:clamp(30px,7vw,44px);margin:12px 0}.intro{text-align:center;color:var(--muted);line-height:1.55}
+.panel{background:linear-gradient(145deg,#211725,#141625);border:1px solid #493247;border-radius:22px;padding:20px;box-shadow:0 15px 45px #0006}
+button,input{font:inherit}button{border:0;border-radius:12px;padding:14px 15px;font-weight:800;cursor:pointer}
+button:disabled{opacity:.4;cursor:not-allowed}.primary{background:var(--red);color:white}.secondary{background:#2b283b;color:white}
+.actions{display:flex;gap:10px}.actions button{flex:1}.joinrow{display:flex;gap:10px;margin-top:12px}
+input{flex:1;min-width:0;background:#090d17;color:white;border:1px solid #39384a;border-radius:12px;padding:13px;text-transform:uppercase;letter-spacing:2px}
+.hint,.small{font-size:13px;color:var(--muted);line-height:1.5}#notice{text-align:center;color:#ffd1d8;min-height:24px;font-size:14px;margin:14px 0}
+#room{display:none;margin-top:18px}.roomtop{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.roomcode{font-size:clamp(22px,6vw,30px);font-weight:900;letter-spacing:3px;overflow-wrap:anywhere}.status{color:var(--green);font-size:12px;font-weight:bold;text-align:right}
+.voicebox{margin-top:18px;padding:18px;background:#0b0e18;border:1px solid #343346;border-radius:16px;text-align:center}
+.mic{font-size:42px;margin:5px}.voiceState{font-weight:bold;margin:8px 0}.controls{display:flex;gap:10px;margin-top:15px}.controls button{flex:1}
+#mute.muted{background:#713044}#leave{background:#353044;color:#fff}
+footer{text-align:center;color:#777;margin:22px;font-size:12px}
+@media(max-width:430px){.panel{padding:15px}.actions,.joinrow,.controls{flex-direction:column}.actions button,.joinrow button,.controls button{width:100%}}
+</style>
+</head>
+<body>
+<header><a href="index.html"><span>ARCADE</span>PLAY</a></header>
+<main>
+<div class="eyebrow">PRIVATE • VOICE ONLY</div>
+<h1>🎙️ Voice Room</h1>
+<p class="intro">Create a private room and invite someone you know with a room code. No public room directory and no audio recording.</p>
+<section class="panel">
+<div class="actions"><button id="create" class="primary" disabled>＋ CREATE PRIVATE ROOM</button><button id="copy" class="secondary" disabled>🔗 COPY INVITE</button></div>
+<div class="joinrow"><input id="codeInput" maxlength="8" placeholder="ENTER ROOM CODE" aria-label="Room code"><button id="join" class="secondary" disabled>JOIN ROOM</button></div>
+<p class="hint">Your microphone is requested only when you press Start Voice or Join Room. Share codes only with people you know.</p>
+<div id="notice" role="status" aria-live="polite">Connecting securely…</div>
+<div id="room">
+<div class="roomtop"><div><div class="small">PRIVATE ROOM CODE</div><div class="roomcode" id="codeLabel">--------</div></div><div class="status" id="roomStatus">WAITING</div></div>
+<div class="voicebox"><div class="mic" id="micIcon">🎙️</div><div class="voiceState" id="voiceState">Room created. Start voice when ready.</div><div class="small" id="participantState">Waiting for the invited person…</div>
+<div class="controls"><button id="start" class="primary">START VOICE</button><button id="mute" class="secondary" disabled>MUTE MIC</button><button id="leave" class="secondary">LEAVE ROOM</button></div>
+</div>
+<p class="small" style="text-align:center">Leaving stops your microphone locally. Voice is live only while you stay connected.</p>
+</div>
+</section>
+<footer>ArcadePlay · Private Voice Room</footer>
+</main>
+<audio id="remoteAudio" autoplay playsinline></audio>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig={apiKey:"AIzaSyDvQQcV1EDICgxzCKqGN8sgFpuoNZ42bS0",authDomain:"arcadeplay-a5479.firebaseapp.com",databaseURL:"https://arcadeplay-a5479-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"arcadeplay-a5479",storageBucket:"arcadeplay-a5479.firebasestorage.app",messagingSenderId:"105892938575",appId:"1:105892938575:web:34e67ec280b187d3e23b3a"};
+firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth(),db=firebase.database(),$=id=>document.getElementById(id);
+let uid=null,roomId=null,roomRef=null,roomData=null,isHost=false,roomListener=null,peer=null,localStream=null;
+let remoteCandidateQueue=[],candidateListener=null,offerStarted=false,answerStarted=false,muted=false;
+const rtcConfig={iceServers:[{urls:"stun:stun.l.google.com:19302"}]};
+function say(message){$("notice").textContent=message}
+function makeCode(){const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let out="";for(let i=0;i<8;i++)out+=chars[Math.floor(Math.random()*chars.length)];return out}
+function showRoom(code){$("room").style.display="block";$("codeLabel").textContent=code;$("copy").disabled=false}
+function setVoiceState(message){$("voiceState").textContent=message}
+function stopPeer(){if(candidateListener&&roomRef)roomRef.child(isHost?"guestCandidates":"hostCandidates").off("child_added",candidateListener);candidateListener=null;if(peer){peer.close();peer=null}if(localStream){localStream.getTracks().forEach(track=>track.stop());localStream=null}$("remoteAudio").srcObject=null;$("mute").disabled=true;$("start").disabled=false;$("start").textContent="START VOICE";muted=false;$("mute").textContent="MUTE MIC";$("mute").classList.remove("muted")}
+function cleanup(){stopPeer();if(roomRef&&roomListener)roomRef.off("value",roomListener);roomRef=null;roomListener=null;roomData=null;roomId=null;offerStarted=false;answerStarted=false;remoteCandidateQueue=[];$("room").style.display="none";$("copy").disabled=true;$("start").disabled=false}
+async function getMic(){if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)throw new Error("Microphone access needs HTTPS and a supported browser.");return navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false})}
+async function ensurePeer(){
+ if(peer)return peer;
+ peer=new RTCPeerConnection(rtcConfig);
+ peer.ontrack=event=>{const stream=event.streams&&event.streams[0];if(stream){$("remoteAudio").srcObject=stream;$("remoteAudio").play().catch(()=>setVoiceState("Tap the page once to hear the other person."));setVoiceState("Voice connected.")}};
+ peer.onconnectionstatechange=()=>{if(!peer)return;const state=peer.connectionState;if(state==="connected"){setVoiceState("Voice connected.");$("roomStatus").textContent="CONNECTED"}else if(state==="failed"){setVoiceState("Connection failed on this network. A TURN relay may be needed.");$("roomStatus").textContent="CONNECTION ISSUE"}else if(state==="disconnected"){setVoiceState("Connection interrupted. Trying to reconnect…")}};
+ if(!localStream)localStream=await getMic();
+ localStream.getTracks().forEach(track=>peer.addTrack(track,localStream));
+ peer.onicecandidate=event=>{if(event.candidate&&roomRef){roomRef.child(isHost?"hostCandidates":"guestCandidates").push(event.candidate.toJSON()).catch(e=>say("Could not send connection data: "+e.message))}};
+ const remotePath=isHost?"guestCandidates":"hostCandidates";
+ candidateListener=snap=>{const candidateData=snap.val();if(!candidateData)return;const candidate=new RTCIceCandidate(candidateData);if(peer&&peer.remoteDescription)peer.addIceCandidate(candidate).catch(()=>{});else remoteCandidateQueue.push(candidate)};
+ roomRef.child(remotePath).on("child_added",candidateListener);
+ return peer
+}
+async function flushCandidates(){if(!peer||!peer.remoteDescription)return;for(const candidate of remoteCandidateQueue.splice(0)){try{await peer.addIceCandidate(candidate)}catch(e){}}}
+async function hostOffer(){
+ if(!isHost||offerStarted||!roomData||!roomData.guestUid||!localStream)return;
+ offerStarted=true;
+ try{const pc=await ensurePeer();const offer=await pc.createOffer();await pc.setLocalDescription(offer);await roomRef.child("offer").set({type:offer.type,sdp:offer.sdp});setVoiceState("Calling… waiting for the other person to connect.")}
+ catch(e){offerStarted=false;setVoiceState("Could not start voice: "+e.message)}
+}
+async function guestAnswer(offer){
+ if(isHost||answerStarted||!offer||!localStream)return;
+ answerStarted=true;
+ try{const pc=await ensurePeer();await pc.setRemoteDescription(new RTCSessionDescription(offer));await flushCandidates();const answer=await pc.createAnswer();await pc.setLocalDescription(answer);await roomRef.child("answer").set({type:answer.type,sdp:answer.sdp});setVoiceState("Joining voice…")}
+ catch(e){answerStarted=false;setVoiceState("Could not join voice: "+e.message)}
+}
+function watchRoom(code){
+ if(roomRef&&roomListener)roomRef.off("value",roomListener);
+ roomId=code;roomRef=db.ref("voiceRooms/"+code);showRoom(code);
+ roomListener=async snapshot=>{
+  roomData=snapshot.val();
+  if(!roomData){say("Room not found or no longer available.");return}
+  isHost=roomData.hostUid===uid;
+  if(!isHost&&roomData.guestUid!==uid){say("You are not a participant in this room.");return}
+  if(!roomData.hostUid){say("That code has no active host. Check the code with your invite sender.");return}
+  $("roomStatus").textContent=roomData.guestUid?"INVITEE JOINED":"WAITING FOR INVITEE";
+  $("participantState").textContent=roomData.guestUid?"Both participants are in the private room.":"Waiting for the invited person…";
+  if(isHost&&roomData.guestUid&&roomData.answer&&peer&&!peer.remoteDescription){try{await peer.setRemoteDescription(new RTCSessionDescription(roomData.answer));await flushCandidates()}catch(e){setVoiceState("Could not finish connection: "+e.message)}}
+  if(!isHost&&roomData.offer&&localStream)await guestAnswer(roomData.offer);
+  if(isHost&&roomData.guestUid&&localStream)await hostOffer();
+ };
+ roomRef.on("value",roomListener,error=>say("Room access error: "+error.message));
+}
+async function startVoice(){
+ try{$("start").disabled=true;setVoiceState("Requesting microphone permission…");localStream=await getMic();$("micIcon").textContent="🎙️";$("mute").disabled=false;setVoiceState("Microphone ready.");
+  if(isHost){if(roomData&&roomData.guestUid)await hostOffer();else setVoiceState("Microphone ready. Waiting for the invited person…")}
+  else if(roomData&&roomData.offer)await guestAnswer(roomData.offer);
+ }catch(e){$("start").disabled=false;setVoiceState(e.name==="NotAllowedError"?"Microphone permission was not granted. Allow it in browser settings to continue.":e.message)}
+}
+$("create").onclick=async()=>{
+ try{$("create").disabled=true;let code,ref,created=false;
+  for(let i=0;i<12;i++){code=makeCode();ref=db.ref("voiceRooms/"+code);try{await ref.child("hostUid").set(uid);created=true;break}catch(e){if(e.code!=="PERMISSION_DENIED")throw e}}
+  if(!created)throw new Error("Could not create a unique room. Please try again.");
+  isHost=true;watchRoom(code);say("Private room created. Copy the invite and share it only with someone you know.");
+ }catch(e){say("Could not create room: "+e.message);$("create").disabled=false}
+};
+$("join").onclick=async()=>{
+ const code=$("codeInput").value.trim().toUpperCase();
+ if(!/^[A-HJ-NP-Z2-9]{8}$/.test(code)){say("Enter a valid 8-character room code.");return}
+ try{$("join").disabled=true;const ref=db.ref("voiceRooms/"+code);
+  await ref.child("guestUid").set(uid);
+  isHost=false;watchRoom(code);await startVoice();
+ }catch(e){say("Could not join. The code may be incorrect or the room may be full. "+e.message)}finally{$("join").disabled=false}
+};
+$("codeInput").addEventListener("input",event=>event.target.value=event.target.value.toUpperCase().replace(/[^A-Z0-9]/g,""));
+$("start").onclick=startVoice;
+$("mute").onclick=()=>{if(!localStream)return;muted=!muted;localStream.getAudioTracks().forEach(track=>track.enabled=!muted);$("mute").textContent=muted?"UNMUTE MIC":"MUTE MIC";$("mute").classList.toggle("muted",muted);setVoiceState(muted?"Microphone muted.":"Microphone on.")};
+$("leave").onclick=()=>{cleanup();say("You left the room. Your microphone has been stopped.");$("create").disabled=false};
+$("copy").onclick=async()=>{if(!roomId)return;const link=location.origin+location.pathname+"?room="+encodeURIComponent(roomId);const invite="Join my private ArcadePlay voice room. Code: "+roomId+" Link: "+link;try{await navigator.clipboard.writeText(invite);say("Invite copied. Share it only with someone you know.")}catch(e){say("Share this room code: "+roomId)}};
+auth.signInAnonymously().then(credential=>{uid=credential.user.uid;$("create").disabled=false;$("join").disabled=false;say("Connected. Create a private room or enter an invite code.");const invite=new URLSearchParams(location.search).get("room");if(invite){$("codeInput").value=invite.toUpperCase();say("Invite code loaded. Press Join Room to connect.")}}).catch(error=>say("Sign-in failed: "+error.message));
+window.addEventListener("beforeunload",()=>{stopPeer();if(roomRef&&roomListener)roomRef.off("value",roomListener)});
+</script>
+</body></html>
