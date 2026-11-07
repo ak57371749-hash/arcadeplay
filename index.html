@@ -1,82 +1,231 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#090b12">
-<title>ArcadePlay - Online Arcade Gaming</title>
+<meta name="theme-color" content="#080a12">
+<title>ArcadePlay - Play. Fight. Connect.</title>
+<meta name="description" content="Welcome to ArcadePlay, your destination for classic retro arcade gaming.">
 <style>
-*{box-sizing:border-box}
-body{margin:0;background:#090b12;color:white;font-family:Arial,sans-serif}
-header{padding:20px 6%;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #252938}
-.logo{font-size:25px;font-weight:900;color:#ff3939}
-nav{color:#aaa;font-size:14px}
-.hero{text-align:center;padding:75px 20px 55px}
-.tag{color:#ff5555;letter-spacing:3px;font-size:12px;font-weight:bold}
-h1{font-size:clamp(38px,8vw,65px);margin:20px 0}
-h1 span{color:#ff3939}
-.hero p{color:#aaa;line-height:1.7;max-width:550px;margin:0 auto}
-.game{max-width:850px;margin:25px auto 60px;padding:20px}
-.poster{background:linear-gradient(135deg,#351018,#101827 60%,#331313);border:1px solid #613039;border-radius:18px;padding:55px 20px;text-align:center}
-.poster .emoji{font-size:65px}
-.poster h2{font-size:30px;margin:15px 0}
-.poster p{color:#ccc}
-.players{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:25px 0}
-.players span{background:#252b3a;padding:10px 17px;border-radius:25px;font-size:13px}
-.btn{display:inline-block;background:#ed303b;color:white;text-decoration:none;padding:15px 35px;border-radius:8px;font-weight:bold}
-.btn:hover{background:#c91e2a}
-.note{color:#999;font-size:12px;margin-top:20px}
-.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:15px;max-width:850px;margin:0 auto 60px;padding:0 20px}
-.feature{background:#151a26;padding:23px;border-radius:12px;border:1px solid #252c3c}
-.feature h3{margin-top:0}
-.feature p{color:#aaa;font-size:14px;line-height:1.6}
-footer{text-align:center;border-top:1px solid #252938;padding:25px;color:#888;font-size:13px}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+background:#080a12;
+color:#fff;
+font-family:Arial,Helvetica,sans-serif;
+line-height:1.6;
+}
+header{
+position:sticky;top:0;z-index:10;
+background:rgba(8,10,18,.95);
+border-bottom:1px solid #252938;
+padding:17px 6%;
+display:flex;justify-content:space-between;
+align-items:center;gap:15px;
+backdrop-filter:blur(12px);
+}
+.logo{font-size:27px;font-weight:900;color:#ff3948;letter-spacing:-1px}
+.logo span{color:#fff}
+nav{display:flex;gap:22px}
+nav a{color:#bbb;text-decoration:none;font-size:14px}
+nav a:hover{color:#ff3948}
+.hero{
+min-height:510px;padding:100px 20px 75px;
+text-align:center;
+background:radial-gradient(ellipse at 50% 15%,#381321 0%,#11101c 38%,#080a12 75%);
+}
+.tag{
+color:#ff5965;letter-spacing:4px;
+font-size:13px;font-weight:bold;
+}
+h1{
+font-size:clamp(42px,8vw,76px);
+line-height:1.08;margin:25px auto;
+font-weight:900;
+}
+h1 span{color:#ff3948}
+.hero p{
+max-width:600px;margin:0 auto;
+color:#aaa;font-size:18px;
+}
+.hero-actions{
+display:flex;justify-content:center;
+gap:15px;flex-wrap:wrap;margin-top:32px;
+}
+.btn{
+display:inline-block;padding:13px 27px;
+border-radius:8px;text-decoration:none;
+font-weight:bold;font-size:15px;
+}
+.btn-red{background:#f32e40;color:white}
+.btn-outline{border:1px solid #555;color:#fff}
+.btn-red:hover{background:#ca1f32}
+.section{padding:65px 6%;max-width:1200px;margin:auto}
+.section-title{text-align:center;margin-bottom:35px}
+.section-title h2{font-size:32px}
+.section-title p{color:#999;margin-top:8px}
+.games{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+gap:25px;
+}
+.game-card{
+background:linear-gradient(145deg,#28131f,#121827);
+border:1px solid #54303e;
+border-radius:18px;
+overflow:hidden;
+transition:.25s;
+}
+.game-card:hover{transform:translateY(-5px);border-color:#ff3948}
+.game-art{
+height:190px;
+display:flex;align-items:center;
+justify-content:center;
+flex-direction:column;gap:12px;
+background:radial-gradient(circle,#492033,#111522);
+}
+.game-art .emoji{font-size:65px}
+.game-info{padding:24px;text-align:center}
+.game-info h3{font-size:25px;margin-bottom:10px}
+.game-info p{color:#aaa;font-size:14px;margin-bottom:20px}
+.status{
+display:inline-block;
+background:#34212a;color:#ff6874;
+padding:8px 20px;border-radius:7px;
+font-weight:bold;font-size:13px;
+}
+.features{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+gap:18px;
+}
+.feature{
+background:#111522;border:1px solid #292e3d;
+padding:25px;border-radius:13px;
+}
+.feature .icon{font-size:32px}
+.feature h3{margin:12px 0 6px}
+.feature p{color:#999;font-size:14px}
+.about{
+text-align:center;
+background:linear-gradient(120deg,#21111c,#101827);
+border:1px solid #39303c;
+border-radius:18px;padding:40px 22px;
+}
+.about p{color:#aaa;max-width:650px;margin:12px auto}
+footer{
+border-top:1px solid #252938;
+padding:30px 15px;text-align:center;
+color:#888;font-size:13px;
+}
+footer span{color:#ff3948}
+@media(max-width:600px){
+header{padding:14px 5%}
+.logo{font-size:23px}
+nav{gap:12px}
+nav a{font-size:12px}
+.hero{padding:85px 18px 65px}
+.hero p{font-size:16px}
+.section{padding:50px 6%}
+.section-title h2{font-size:27px}
+}
 </style>
 </head>
 <body>
+
 <header>
-<div class="logo">ARCADEPLAY</div>
-<nav>ONLINE ARCADE GAMING</nav>
+<div class="logo">ARCADE<span>PLAY</span></div>
+<nav>
+<a href="#home">Home</a>
+<a href="#games">Games</a>
+<a href="#about">About</a>
+</nav>
 </header>
 
-<section class="hero">
+<main>
+<section class="hero" id="home">
 <div class="tag">WELCOME TO THE ARCADE</div>
-<h1>PLAY. FIGHT. <span>CONNECT.</span></h1>
-<p>Experience classic arcade gaming with friends. Join the world of online multiplayer retro gaming.</p>
+<h1>PLAY. FIGHT.<br><span>CONNECT.</span></h1>
+<p>Step into the world of classic arcade gaming. Discover legendary games and get ready for an exciting retro gaming experience.</p>
+<div class="hero-actions">
+<a href="#games" class="btn btn-red">EXPLORE GAMES</a>
+<a href="#about" class="btn btn-outline">ABOUT US</a>
+</div>
 </section>
 
-<section class="game">
-<div class="poster">
+<section class="section" id="games">
+<div class="section-title">
+<div class="tag">THE GAME ZONE</div>
+<h2>Featured Games</h2>
+<p>Classic arcade adventures are coming to ArcadePlay.</p>
+</div>
+
+<div class="games">
+<div class="game-card">
+<div class="game-art">
 <div class="emoji">🎮</div>
 <div class="tag">CLASSIC ARCADE EXPERIENCE</div>
-<h2>Cadillacs & Dinosaurs</h2>
-<p>Three-player online arcade adventure coming soon.</p>
-<div class="players">
-<span>👤 Player 1</span>
-<span>👤 Player 2</span>
-<span>👤 Player 3</span>
 </div>
-<a class="btn" href="#coming">COMING SOON</a>
-<div class="note" id="coming">Game access will be announced after testing and licensing.</div>
+<div class="game-info">
+<h3>Cadillacs &amp; Dinosaurs</h3>
+<p>Get ready for a legendary arcade adventure. We are working towards an authorized browser version.</p>
+<div class="status">COMING SOON</div>
+</div>
+</div>
+
+<div class="game-card">
+<div class="game-art">
+<div class="emoji">🕹️</div>
+<div class="tag">RETRO GAMING</div>
+</div>
+<div class="game-info">
+<h3>More Arcade Games</h3>
+<p>More exciting classic gaming experiences are planned for the ArcadePlay collection.</p>
+<div class="status">COMING SOON</div>
+</div>
+</div>
 </div>
 </section>
 
-<section class="features">
+<section class="section">
+<div class="section-title">
+<div class="tag">WHY ARCADEPLAY</div>
+<h2>Built For Arcade Fans</h2>
+<p>Our vision for the next generation of retro gaming.</p>
+</div>
+<div class="features">
 <div class="feature">
-<h3>🌐 Online Gaming</h3>
-<p>Play arcade games with friends over the internet.</p>
+<div class="icon">🌐</div>
+<h3>Online Gaming</h3>
+<p>Our goal is to bring classic arcade experiences to your browser.</p>
 </div>
 <div class="feature">
-<h3>👥 Multiplayer</h3>
-<p>Our target is up to three players in one game room.</p>
+<div class="icon">👥</div>
+<h3>Multiplayer Vision</h3>
+<p>We are planning online rooms for up to three players.</p>
 </div>
 <div class="feature">
-<h3>📱 Browser Ready</h3>
-<p>Designed for mobile phones and desktop browsers.</p>
+<div class="icon">📱</div>
+<h3>Mobile Friendly</h3>
+<p>A modern design made for mobile phones and desktop browsers.</p>
+</div>
 </div>
 </section>
 
-<footer>© 2026 ArcadePlay. All rights reserved.</footer>
+<section class="section" id="about">
+<div class="about">
+<div class="tag">OUR MISSION</div>
+<h2>Welcome to ArcadePlay</h2>
+<p>ArcadePlay is being built for people who love classic arcade games. Our mission is to create a simple and exciting place for retro gaming fans.</p>
+<p>We are working on the experience, game permissions and technology needed to bring this vision to life.</p>
+</div>
+</section>
+</main>
+
+<footer>
+<p>© 2026 <span>ArcadePlay</span>. All rights reserved.</p>
+<p>PLAY. FIGHT. CONNECT.</p>
+</footer>
+
 </body>
 </html>
