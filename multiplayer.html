@@ -28,4 +28,6 @@ document.querySelectorAll(".cell").forEach(el=>el.onclick=async()=>{if(!roomRef|
 $("rematch").onclick=async()=>{if(roomRef&&room&&room.guestUid)await roomRef.child("state").set({...fresh(),status:"playing"})};$("leave").onclick=()=>{stop();say("You left the room.")};
 $("copy").onclick=async()=>{if(!roomId)return;let link=location.origin+location.pathname+"?room="+roomId;try{await navigator.clipboard.writeText("Join my ArcadePlay game! Room: "+roomId+" "+link);say("Invite link copied!")}catch(e){say("Share this room code: "+roomId)}};
 auth.signInAnonymously().then(async cred=>{uid=cred.user.uid;$("create").disabled=false;$("join").disabled=false;say("Connected. Create a room or join a friend's room.");let invite=new URLSearchParams(location.search).get("room");if(invite){$("codeInput").value=invite.toUpperCase();try{await joinRoom(invite.toUpperCase())}catch(e){say(e.message)}}}).catch(e=>say("Sign-in failed: "+e.message));
-</script></body></html>
+</script>
+<script src="tic-tac-toe-voice.js"></script>
+</body></html>
