@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#080a12">
+  <title>Snake Game | ArcadePlay</title>
+  <style>
+    :root {
+      --bg: #080a12;
+      --panel: #141522;
+      --panel2: #1b1b2b;
+      --red: #ff3948;
+      --green: #54f28b;
+      --muted: #a7a8b5;
+      --line: rgba(255, 57, 72, .28);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; padding: 22px 14px 34px;
+      background: radial-gradient(circle at top, #191426 0, var(--bg) 52%);
+      color: #fff; font-family: Arial, Helvetica, sans-serif;
+    }
+    .wrap { width: min(100%, 560px); margin: 0 auto; }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; padding: 8px 2px 22px; border-bottom: 1px solid #292938;
+    }
+    .brand { color: #fff; font-size: 23px; font-weight: 900; letter-spacing: -1px; text-decoration: none; }
+    .brand span { color: var(--red); }
+    .back { color: #ddd; text-decoration: none; font-size: 14px; }
+    .eyebrow { color: var(--red); font-size: 12px; font-weight: 800; letter-spacing: 2px; margin: 28px 0 8px; text-align: center; }
+    h1 { text-align: center; font-size: clamp(30px, 8vw, 42px); margin: 0 0 8px; }
+    .sub { color: var(--muted); text-align: center; margin: 0 0 22px; line-height: 1.5; }
+    .game-panel {
+      background: linear-gradient(145deg, #1b1929, #111421);
+      border: 1px solid var(--line); border-radius: 22px; padding: 16px;
+      box-shadow: 0 18px 50px rgba(0,0,0,.35);
+    }
+    .scores { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .score-box { background: #090d17; border: 1px solid #292c3b; border-radius: 12px; padding: 11px; text-align: center; }
+    .score-box small { display: block; color: var(--muted); font-size: 11px; letter-spacing: 1.4px; font-weight: 700; }
+    .score-box strong { display: block; font-size: 25px; margin-top: 4px; color: var(--green); }
+    .board-wrap { position: relative; width: 100%; overflow: hidden; border: 2px solid #293b36; border-radius: 14px; background: #050b0c; }
+    canvas { display: block; width: 100%; height: auto; touch-action: none; }
+    .overlay {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 10px;
+      text-align: center; padding: 18px; background: rgba(3,7,12,.76);
+    }
+    .overlay.hidden { display: none; }
+    .overlay strong { font-size: 27px; }
+    .overlay span { color: #c6c8d0; font-size: 14px; line-height: 1.5; }
+    .actions { display: flex; gap: 10px; margin-top: 14px; }
+    button {
+      border: 0; border-radius: 12px; padding: 13px 16px; font-weight: 800;
+      font-size: 14px; cursor: pointer; color: white; background: #292536;
+      flex: 1; min-height: 46px;
+    }
+    button.primary { background: var(--red); }
+    button:active, .dir:active { transform: scale(.97); }
+    .controls { width: 190px; margin: 18px auto 2px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .dir { min-height: 48px; padding: 8px; font-size: 22px; background: #242638; border: 1px solid #393b50; touch-action: manipulation; }
+    .dir.up { grid-column: 2; }
+    .dir.left { grid-column: 1; grid-row: 2; }
+    .dir.down { grid-column: 2; grid-row: 2; }
+    .dir.right { grid-column: 3; grid-row: 2; }
+    .hint { color: var(--muted); text-align: center; font-size: 12px; margin: 15px 0 0; line-height: 1.5; }
+    footer { text-align: center; color: #777988; font-size: 12px; margin-top: 24px; }
+    @media (min-width: 600px) { body { padding-top: 30px; } .game-panel { padding: 20px; } }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <a class="brand" href="index.html"><span>ARCADE</span>PLAY</a>
+      <a class="back" href="index.html">← Back to Home</a>
+    </header>
+
+    <p class="eyebrow">THE GAME ZONE</p>
+    <h1>🐍 Snake Game</h1>
+    <p class="sub">Eat the food. Grow longer. Beat your best score!</p>
+
+    <section class="game-panel" aria-label="Snake game">
+      <div class="scores">
+        <div class="score-box"><small>SCORE</small><strong id="score">0</strong></div>
+        <div class="score-box"><small>BEST</small><strong id="best">0</strong></div>
+      </div>
+
+      <div class="board-wrap">
+        <canvas id="game" width="400" height="400" aria-label="Snake game board"></canvas>
+        <div class="overlay" id="overlay">
+          <strong id="overlayTitle">Ready to Play?</strong>
+          <span id="overlayText">Use arrow keys or the touch controls to move.</span>
+          <button class="primary" id="startBtn" style="flex:0 0 auto;min-width:150px">START GAME</button>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="primary" id="restartBtn">↻ RESTART</button>
+        <button id="pauseBtn">Ⅱ PAUSE</button>
+      </div>
+
+      <div class="controls" aria-label="Touch controls">
+        <button class="dir up" data-dir="up" aria-label="Up">▲</button>
+        <button class="dir left" data-dir="left" aria-label="Left">◀</button>
+        <button class="dir down" data-dir="down" aria-label="Down">▼</button>
+        <button class="dir right" data-dir="right" aria-label="Right">▶</button>
+      </div>
+      <p class="hint">Mobile: tap the arrows · Computer: use ← ↑ → ↓ keys<br>Don't hit the wall or your own tail!</p>
+    </section>
+
+    <footer>© 2026 ArcadePlay. All rights reserved.</footer>
+  </main>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById('game');
+      const ctx = canvas.getContext('2d');
+      const scoreEl = document.getElementById('score');
+      const bestEl = document.getElementById('best');
+      const overlay = document.getElementById('overlay');
+      const overlayTitle = document.getElementById('overlayTitle');
+      const overlayText = document.getElementById('overlayText');
+      const startBtn = document.getElementById('startBtn');
+      const pauseBtn = document.getElementById('pauseBtn');
+      const restartBtn = document.getElementById('restartBtn');
+
+      const cells = 20;
+      const size = canvas.width / cells;
+      let snake, food, direction, nextDirection, score, best, timer, running, paused;
+      best = Number(localStorage.getItem('arcadeplay-snake-best') || 0);
+      bestEl.textContent = best;
+
+      function randomFood() {
+        let p;
+        do {
+          p = { x: Math.floor(Math.random() * cells), y: Math.floor(Math.random() * cells) };
+        } while (snake.some(s => s.x === p.x && s.y === p.y));
+        return p;
+      }
+
+      function resetState() {
+        snake = [{x: 9, y: 10}, {x: 8, y: 10}, {x: 7, y: 10}];
+        direction = {x: 1, y: 0};
+        nextDirection = {x: 1, y: 0};
+        score = 0;
+        scoreEl.textContent = '0';
+        food = randomFood();
+        running = false;
+        paused = false;
+        clearInterval(timer);
+        pauseBtn.textContent = 'Ⅱ PAUSE';
+        draw();
+      }
+
+      function draw() {
+        ctx.fillStyle = '#050b0c';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = 'rgba(92, 150, 120, .10)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= cells; i++) {
+          ctx.beginPath(); ctx.moveTo(i * size, 0); ctx.lineTo(i * size, canvas.height); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(0, i * size); ctx.lineTo(canvas.width, i * size); ctx.stroke();
+        }
+        ctx.fillStyle = '#ff5965';
+        ctx.shadowColor = '#ff3948'; ctx.shadowBlur = 13;
+        ctx.beginPath();
+        ctx.arc(food.x * size + size/2, food.y * size + size/2, size * .34, 0, Math.PI * 2);
+        ctx.fill(); ctx.shadowBlur = 0;
+
+        snake.forEach((part, i) => {
+          const inset = 2;
+          ctx.fillStyle = i === 0 ? '#a4ffbd' : '#39d979';
+          ctx.shadowColor = '#54f28b'; ctx.shadowBlur = i === 0 ? 12 : 5;
+          ctx.beginPath();
+          ctx.roundRect(part.x * size + inset, part.y * size + inset, size - inset*2, size - inset*2, 5);
+          ctx.fill();
+        });
+        ctx.shadowBlur = 0;
+        const head = snake[0];
+        ctx.fillStyle = '#062414';
+        const eyeX = direction.x === 1 ? 13 : direction.x === -1 ? 5 : 6;
+        const eyeY = direction.y === 1 ? 13 : direction.y === -1 ? 5 : 6;
+        if (direction.x !== 0) {
+          ctx.fillRect(head.x*size + eyeX, head.y*size + 5, 2, 2);
+          ctx.fillRect(head.x*size + eyeX, head.y*size + 13, 2, 2);
+        } else {
+          ctx.fillRect(head.x*size + 5, head.y*size + eyeY, 2, 2);
+          ctx.fillRect(head.x*size + 13, head.y*size + eyeY, 2, 2);
+        }
+      }
+
+      function endGame() {
+        running = false;
+        clearInterval(timer);
+        overlayTitle.textContent = 'GAME OVER!';
+        overlayText.textContent = `Your score: ${score}. Try again and beat your best!`;
+        startBtn.textContent = 'PLAY AGAIN';
+        overlay.classList.remove('hidden');
+      }
+
+      function tick() {
+        direction = nextDirection;
+        const head = {x: snake[0].x + direction.x, y: snake[0].y + direction.y};
+        const eating = head.x === food.x && head.y === food.y;
+        const bodyToCheck = eating ? snake : snake.slice(0, -1);
+        if (head.x < 0 || head.y < 0 || head.x >= cells || head.y >= cells ||
+            bodyToCheck.some(p => p.x === head.x && p.y === head.y)) {
+          endGame(); return;
+        }
+        snake.unshift(head);
+        if (eating) {
+          score += 10;
+          scoreEl.textContent = score;
+          if (score > best) {
+            best = score;
+            bestEl.textContent = best;
+            localStorage.setItem('arcadeplay-snake-best', String(best));
+          }
+          food = randomFood();
+        } else {
+          snake.pop();
+        }
+        draw();
+      }
+
+      function startGame() {
+        if (running) return;
+        if (!snake || score === 0 && snake.length === 3 && overlayTitle.textContent === 'GAME OVER!') resetState();
+        overlay.classList.add('hidden');
+        running = true;
+        paused = false;
+        pauseBtn.textContent = 'Ⅱ PAUSE';
+        clearInterval(timer);
+        timer = setInterval(tick, 135);
+      }
+
+      function setDirection(name) {
+        const dirs = {
+          up: {x:0,y:-1}, down: {x:0,y:1},
+          left: {x:-1,y:0}, right: {x:1,y:0}
+        };
+        const chosen = dirs[name];
+        if (!chosen) return;
+        if (chosen.x === -direction.x && chosen.y === -direction.y) return;
+        nextDirection = chosen;
+      }
+
+      startBtn.addEventListener('click', startGame);
+      restartBtn.addEventListener('click', () => {
+        resetState();
+        overlayTitle.textContent = 'Ready to Play?';
+        overlayText.textContent = 'Use arrow keys or the touch controls to move.';
+        startBtn.textContent = 'START GAME';
+        overlay.classList.remove('hidden');
+        startGame();
+      });
+      pauseBtn.addEventListener('click', () => {
+        if (!running && !paused) return;
+        if (paused) {
+          paused = false; running = true; pauseBtn.textContent = 'Ⅱ PAUSE';
+          timer = setInterval(tick, 135);
+        } else {
+          paused = true; running = false; clearInterval(timer);
+          pauseBtn.textContent = '▶ RESUME';
+        }
+      });
+      document.querySelectorAll('[data-dir]').forEach(btn => {
+        btn.addEventListener('click', () => setDirection(btn.dataset.dir));
+      });
+      document.addEventListener('keydown', e => {
+        const keys = {ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right'};
+        if (keys[e.key]) { e.preventDefault(); setDirection(keys[e.key]); }
+        if (e.key === ' ' && !running && paused) pauseBtn.click();
+      });
+
+      let touchStart = null;
+      canvas.addEventListener('touchstart', e => {
+        const t = e.changedTouches[0];
+        touchStart = {x:t.clientX, y:t.clientY};
+      }, {passive:true});
+      canvas.addEventListener('touchend', e => {
+        if (!touchStart) return;
+        const t = e.changedTouches[0];
+        const dx = t.clientX - touchStart.x, dy = t.clientY - touchStart.y;
+        if (Math.max(Math.abs(dx), Math.abs(dy)) > 20) {
+          setDirection(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
+        }
+        touchStart = null;
+      }, {passive:true});
+
+      resetState();
+    })();
+  </script>
+</body>
+</html>
