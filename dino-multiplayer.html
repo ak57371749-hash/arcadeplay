@@ -20,8 +20,20 @@
       display: flex; justify-content: space-between; align-items: center;
       padding: 0 12px; z-index: 30;
     }
-    header span { color: #ff3948; font-size: 13px; font-weight: bold; }
-    header a { color: #bbb; text-decoration: none; font-size: 12px; }
+    .header-left {
+      color: #ff3948; font-size: 13px; font-weight: bold;
+    }
+    .header-actions {
+      display: flex; gap: 8px; align-items: center;
+    }
+    .btn-fs {
+      background: #ff3948; color: #fff; border: none;
+      padding: 4px 10px; border-radius: 5px; font-size: 12px;
+      font-weight: bold; cursor: pointer;
+    }
+    .btn-back {
+      color: #bbb; text-decoration: none; font-size: 12px;
+    }
     
     #multiplayer-controls {
       background: #181d2d; border-bottom: 1px solid #2e354b;
@@ -60,8 +72,11 @@
 <body>
 
   <header>
-    <span>Dino 2P Co-op (Original Gamepad)</span>
-    <a href="index.html">← Back to Arcade</a>
+    <div class="header-left">Dino 2P Co-op</div>
+    <div class="header-actions">
+      <button class="btn-fs" onclick="toggleFullScreen()">⛶ Fullscreen</button>
+      <a href="index.html" class="btn-back">← Back</a>
+    </div>
   </header>
 
   <div id="multiplayer-controls">
@@ -78,6 +93,23 @@
   </div>
 
   <script>
+    function toggleFullScreen() {
+      const container = document.getElementById('game-container');
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        if (container.requestFullscreen) {
+          container.requestFullscreen();
+        } else if (container.webkitRequestFullscreen) {
+          container.webkitRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
+      }
+    }
+
     let peer = null;
     let conn = null;
     let myRole = 'none';
@@ -106,14 +138,12 @@
         conn = c;
         document.getElementById('status-msg').innerText = 'Player 2 Connected! Both can now play.';
         
-        // Host receives Player 2's inputs from their original gamepad
         conn.on('data', (data) => {
           if (data && data.btn !== undefined) {
             handleRemotePlayer2Input(data.btn, data.pressed);
           }
         });
 
-        // Stream canvas video to Player 2
         setTimeout(() => {
           const canvas = document.querySelector('#game canvas');
           if (canvas && canvas.captureStream) {
@@ -141,10 +171,7 @@
           document.getElementById('status-msg').innerText = 'Connected! Use your on-screen buttons to control Player 2.';
           hideRoomBar();
           
-          // Switch to video stream from Host
           document.getElementById('client-view').style.display = 'block';
-          
-          // Intercept Player 2's EmulatorJS gamepad buttons
           interceptLocalGamepad();
         });
       });
@@ -165,7 +192,6 @@
       document.getElementById('room-input').style.display = 'none';
     }
 
-    // Intercept original EmulatorJS on-screen touch gamepad on Device 2
     function interceptLocalGamepad() {
       const sendInput = (btnId, isPressed) => {
         if (conn && conn.open) {
@@ -173,7 +199,6 @@
         }
       };
 
-      // Poll browser/emulator gamepad events or touch inputs
       const checkButtons = () => {
         const touchBtns = document.querySelectorAll('.ejs_control, [class*="ejs_button"], [class*="ejs_dpad"]');
         if (touchBtns.length > 0) {
@@ -187,7 +212,6 @@
       };
       checkButtons();
 
-      // Keyboard fallback if playing on PC/keyboard
       window.addEventListener('keydown', (e) => {
         if (conn && conn.open) conn.send({ btn: e.code, pressed: true });
       });
@@ -196,10 +220,7 @@
       });
     }
 
-    // Host injects Player 2 inputs directly into RetroArch/Core Port 2
     function handleRemotePlayer2Input(btn, isPressed) {
-      // CPS1 Player 2 keycodes mapping
-      // Start: Enter (2), Coin: 6, Left: D, Right: G, Up: R, Down: F, Attack: A, Jump: S
       const p2Map = {
         'Digit2': 'Digit2',
         'Digit6': 'Digit6',
