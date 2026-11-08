@@ -3,265 +3,81 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Cadillacs &amp; Dinosaurs (2-Player Online Co-op)</title>
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <title>Cadillacs &amp; Dinosaurs - 2-Player Co-op</title>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      user-select: none;
-      -webkit-user-select: none;
-      -webkit-touch-callout: none;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body, html {
-      width: 100%;
-      height: 100%;
-      background-color: #000;
+      width: 100%; height: 100%;
+      background-color: #080a12;
       overflow: hidden;
-      display: flex;
-      flex-direction: column;
+      display: flex; flex-direction: column;
       font-family: Arial, sans-serif;
-      color: #fff;
     }
     header {
-      width: 100%;
-      height: 38px;
-      background: #111522;
-      border-bottom: 1px solid #252938;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0 12px;
-      z-index: 50;
+      width: 100%; height: 42px;
+      background: #111522; border-bottom: 1px solid #252938;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0 12px; z-index: 20;
     }
-    .header-left {
-      color: #ff3948;
-      font-size: 13px;
-      font-weight: bold;
-    }
-    .header-actions {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
+    .nav-actions { display: flex; gap: 10px; align-items: center; }
+    header span { color: #ff3948; font-size: 13px; font-weight: bold; }
     .btn-fs {
-      background: #ff3948;
-      color: #fff;
-      border: none;
-      padding: 4px 10px;
-      border-radius: 5px;
-      font-size: 12px;
-      font-weight: bold;
-      cursor: pointer;
+      background: #ff3948; color: #fff; border: none;
+      padding: 5px 10px; border-radius: 5px; font-size: 12px;
+      font-weight: bold; cursor: pointer;
     }
-    .btn-back {
-      color: #bbb;
-      text-decoration: none;
-      font-size: 12px;
-    }
+    .btn-back { color: #bbb; text-decoration: none; font-size: 12px; }
 
-    #multiplayer-controls {
-      background: #181d2d;
-      border-bottom: 1px solid #2e354b;
-      padding: 6px 12px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-      justify-content: center;
-      z-index: 45;
-      font-size: 12px;
+    #room-bar {
+      background: #181d2d; border-bottom: 1px solid #2e354b;
+      padding: 6px 12px; display: flex; gap: 8px;
+      align-items: center; justify-content: center;
+      font-size: 12px; z-index: 20;
     }
     .btn-m {
-      background: #f32e40;
-      color: #fff;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-weight: bold;
-      font-size: 12px;
-      cursor: pointer;
+      background: #f32e40; color: #fff; border: none;
+      padding: 5px 10px; border-radius: 5px; font-weight: bold;
+      font-size: 12px; cursor: pointer;
     }
     .btn-join { background: #28a745; }
     .room-input {
-      background: #0d111a;
-      border: 1px solid #444;
-      color: #fff;
-      padding: 5px 8px;
-      border-radius: 6px;
-      width: 120px;
-      font-size: 12px;
-      text-align: center;
+      background: #0d111a; border: 1px solid #555; color: #fff;
+      padding: 4px 8px; border-radius: 5px; width: 110px;
+      font-size: 12px; text-align: center;
     }
-    #status-msg {
-      width: 100%;
-      text-align: center;
-      font-size: 11px;
-      color: #ffbc00;
-    }
+    #status-text { color: #ffbc00; font-size: 11px; margin-left: 6px; }
 
     #game-container {
-      flex: 1;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      position: relative;
-      background: #000;
-      overflow: hidden;
+      width: 100%; flex: 1;
+      display: flex; justify-content: center; align-items: center;
+      background-color: #000; position: relative;
     }
-    #game {
-      width: 100%;
-      height: 100%;
-      max-width: 960px;
-      max-height: 720px;
-    }
-    #client-view {
-      display: none;
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      background: #000;
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 10;
-    }
-
-    /* Dedicated Player 2 Touch Gamepad */
-    #p2-gamepad-layer {
-      display: none;
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 60;
-      pointer-events: none;
-    }
-    .touchable {
-      pointer-events: auto;
-      touch-action: none;
-    }
-
-    /* D-PAD (LEFT) */
-    .p2-dpad {
-      position: absolute;
-      left: 14px;
-      bottom: 14px;
-      width: 140px;
-      height: 140px;
-    }
-    .dp-btn {
-      position: absolute;
-      width: 44px;
-      height: 44px;
-      background: rgba(255, 255, 255, 0.22);
-      border: 2px solid rgba(255, 255, 255, 0.45);
-      border-radius: 8px;
-      color: #fff;
-      font-size: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .dp-btn:active { background: rgba(255, 57, 72, 0.7); }
-    .dp-up { top: 0; left: 48px; }
-    .dp-down { bottom: 0; left: 48px; }
-    .dp-left { top: 48px; left: 0; }
-    .dp-right { top: 48px; right: 0; }
-
-    /* SYSTEM (COIN / START - TOP/CENTER) */
-    .p2-sys {
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 12px;
-    }
-    .sys-btn {
-      background: rgba(17, 21, 34, 0.85);
-      border: 1px solid #ff3948;
-      color: #fff;
-      padding: 6px 14px;
-      border-radius: 6px;
-      font-size: 11px;
-      font-weight: bold;
-    }
-    .sys-btn:active { background: #ff3948; }
-
-    /* ACTION BUTTONS (ATTACK / JUMP - RIGHT) */
-    .p2-actions {
-      position: absolute;
-      right: 18px;
-      bottom: 20px;
-      display: flex;
-      gap: 16px;
-    }
-    .act-btn {
-      width: 62px;
-      height: 62px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.25);
-      border: 2px solid rgba(255, 255, 255, 0.5);
-      color: #fff;
-      font-size: 13px;
-      font-weight: 900;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .act-btn.attack {
-      background: rgba(255, 57, 72, 0.5);
-      border-color: #ff3948;
-    }
-    .act-btn:active { transform: scale(0.92); filter: brightness(1.3); }
+    #game { width: 100%; height: 100%; max-width: 960px; max-height: 720px; }
   </style>
 </head>
 <body>
 
   <header>
-    <div class="header-left">Dino 2P Online Co-op</div>
-    <div class="header-actions">
+    <span>Dino 2P Online Co-op</span>
+    <div class="nav-actions">
       <button class="btn-fs" onclick="toggleFullScreen()">⛶ Fullscreen</button>
       <a href="index.html" class="btn-back">← Back</a>
     </div>
   </header>
 
-  <div id="multiplayer-controls">
-    <button class="btn-m" id="host-btn" onclick="initHost()">👑 Host Game (P1)</button>
-    <input type="text" id="room-input" class="room-input" placeholder="Room Code">
-    <button class="btn-m btn-join" id="join-btn" onclick="initJoin()">🎮 Join Game (P2)</button>
-    <div id="status-msg">Click Host (Device 1) or enter code to Join (Device 2)</div>
+  <div id="room-bar">
+    <button class="btn-m" id="host-btn" onclick="setupHost()">👑 Host (P1)</button>
+    <input type="text" id="room-code" class="room-input" placeholder="Room Code">
+    <button class="btn-m btn-join" id="join-btn" onclick="setupJoin()">🎮 Join (P2)</button>
+    <span id="status-text">Ready</span>
   </div>
 
   <div id="game-container">
     <div id="game"></div>
-    <video id="client-view" autoplay playsinline muted></video>
-
-    <!-- P2 Overlay Gamepad (Guaranteed visible on Device 2) -->
-    <div id="p2-gamepad-layer">
-      <div class="p2-dpad">
-        <div class="dp-btn dp-up touchable" data-code="KeyR">▲</div>
-        <div class="dp-btn dp-down touchable" data-code="KeyF">▼</div>
-        <div class="dp-btn dp-left touchable" data-code="KeyD">◀</div>
-        <div class="dp-btn dp-right touchable" data-code="KeyG">▶</div>
-      </div>
-
-      <div class="p2-sys">
-        <button class="sys-btn touchable" data-code="Digit6">🪙 COIN 2</button>
-        <button class="sys-btn touchable" data-code="Digit2">START 2P</button>
-      </div>
-
-      <div class="p2-actions">
-        <div class="act-btn touchable" data-code="KeyS">JUMP</div>
-        <div class="act-btn attack touchable" data-code="KeyA">ATTACK</div>
-      </div>
-    </div>
   </div>
+
+  <!-- PeerJS library loaded asynchronously so emulator is not blocked -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
   <script>
     function toggleFullScreen() {
@@ -281,10 +97,7 @@
       }
     }
 
-    let peer = null;
-    let conn = null;
-
-    // EmulatorJS Settings
+    // Identical core settings as the working dino.html
     window.EJS_player = '#game';
     window.EJS_core = 'arcade';
     window.EJS_gameName = 'dino';
@@ -292,125 +105,72 @@
     window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
     window.EJS_startOnLoaded = true;
 
-    // 1. Host Game (Device 1 - Player 1)
-    function initHost() {
-      const code = 'dino-' + Math.floor(1000 + Math.random() * 9000);
-      document.getElementById('status-msg').innerText = 'Creating room...';
+    // WebRTC Sync Layer
+    let peer = null;
+    let conn = null;
 
+    function setupHost() {
+      const code = 'dino-' + Math.floor(1000 + Math.random() * 9000);
+      document.getElementById('status-text').innerText = 'Creating...';
       peer = new Peer(code);
       peer.on('open', (id) => {
-        document.getElementById('status-msg').innerHTML = 'Room Code: <b style="color:#00ff99;font-size:14px;">' + id + '</b> (Enter on Device 2)';
-        hideRoomBar();
+        document.getElementById('status-text').innerHTML = 'Code: <b style="color:#00ff99;">' + id + '</b>';
+        document.getElementById('host-btn').style.display = 'none';
+        document.getElementById('join-btn').style.display = 'none';
+        document.getElementById('room-code').style.display = 'none';
       });
 
       peer.on('connection', (c) => {
         conn = c;
-        document.getElementById('status-msg').innerText = 'Player 2 Connected! P2 can insert coin now.';
-
-        // Host receives Player 2's direct keycode signals
+        document.getElementById('status-text').innerText = 'Player 2 Connected!';
         conn.on('data', (data) => {
-          if (data && data.code) {
-            dispatchP2KeyToHost(data.code, data.down);
+          if (data && data.key) {
+            triggerKey(data.key, data.down);
           }
         });
-
-        // Stream canvas video to Device 2
-        setTimeout(() => {
-          const canvas = document.querySelector('#game canvas');
-          if (canvas && canvas.captureStream) {
-            const stream = canvas.captureStream(30);
-            peer.call(conn.peer, stream);
-          }
-        }, 1200);
       });
     }
 
-    // 2. Join Game (Device 2 - Player 2)
-    function initJoin() {
-      const targetRoom = document.getElementById('room-input').value.trim();
-      if (!targetRoom) {
-        alert('Please enter a Room Code first!');
+    function setupJoin() {
+      const target = document.getElementById('room-code').value.trim();
+      if (!target) {
+        alert('Please enter Room Code!');
         return;
       }
-      document.getElementById('status-msg').innerText = 'Connecting to Host...';
-
+      document.getElementById('status-text').innerText = 'Connecting...';
       peer = new Peer();
       peer.on('open', () => {
-        conn = peer.connect(targetRoom);
+        conn = peer.connect(target);
         conn.on('open', () => {
-          document.getElementById('status-msg').innerText = 'Connected! Tap "COIN 2" then "START 2P" to join.';
-          hideRoomBar();
-
-          // Show Video Stream & Custom Player 2 Gamepad
-          document.getElementById('game').style.display = 'none';
-          document.getElementById('client-view').style.display = 'block';
-          document.getElementById('p2-gamepad-layer').style.display = 'block';
-
-          bindP2TouchControls();
-        });
-      });
-
-      peer.on('call', (call) => {
-        call.answer();
-        call.on('stream', (remoteStream) => {
-          const video = document.getElementById('client-view');
-          video.srcObject = remoteStream;
-          video.play();
+          document.getElementById('status-text').innerText = 'Connected as P2!';
+          document.getElementById('host-btn').style.display = 'none';
+          document.getElementById('join-btn').style.display = 'none';
+          document.getElementById('room-code').style.display = 'none';
+          forwardInputs();
         });
       });
     }
 
-    function hideRoomBar() {
-      document.getElementById('host-btn').style.display = 'none';
-      document.getElementById('join-btn').style.display = 'none';
-      document.getElementById('room-input').style.display = 'none';
-    }
-
-    // Player 2 Touch Events -> Send directly over WebRTC Data Channel
-    function bindP2TouchControls() {
-      const elements = document.querySelectorAll('.touchable');
-
-      elements.forEach(btn => {
-        const code = btn.getAttribute('data-code');
-
-        const send = (isDown) => {
-          if (conn && conn.open) {
-            conn.send({ code: code, down: isDown });
-          }
-        };
-
-        btn.addEventListener('touchstart', (e) => {
-          e.preventDefault();
-          send(true);
-        }, { passive: false });
-
-        btn.addEventListener('touchend', (e) => {
-          e.preventDefault();
-          send(false);
-        }, { passive: false });
-
-        btn.addEventListener('mousedown', (e) => {
-          e.preventDefault();
-          send(true);
-        });
-
-        btn.addEventListener('mouseup', (e) => {
-          e.preventDefault();
-          send(false);
-        });
+    function forwardInputs() {
+      window.addEventListener('keydown', (e) => {
+        if (conn && conn.open) conn.send({ key: e.code, down: true });
+      });
+      window.addEventListener('keyup', (e) => {
+        if (conn && conn.open) conn.send({ key: e.code, down: false });
       });
     }
 
-    // Host triggers Player 2 keycode directly into EmulatorJS / RetroArch core
-    function dispatchP2KeyToHost(code, isDown) {
-      const eventType = isDown ? 'keydown' : 'keyup';
-      const event = new KeyboardEvent(eventType, {
-        bubbles: true,
-        cancelable: true,
-        code: code,
-        key: code
+    function triggerKey(code, isDown) {
+      const evt = new KeyboardEvent(isDown ? 'keydown' : 'keyup', {
+        bubbles: true, cancelable: true, code: code, key: code
       });
-      window.dispatchEvent(event);
-      document.dispatchEvent(event);
+      window.dispatchEvent(evt);
+      document.dispatchEvent(evt);
+      const canvas = document.querySelector('#game canvas');
+      if (canvas) canvas.dispatchEvent(evt);
+    }
+  </script>
+  <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
 
-      const canvas = document.querySelector('#game
+</body>
+</html>
