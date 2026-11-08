@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Cadillacs &amp; Dinosaurs - 2-Player Netplay</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      background-color: #05070d;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      height: 48px;
+      background: #111522;
+      border-bottom: 1px solid #252938;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 16px;
+      z-index: 10;
+    }
+    header span {
+      font-weight: bold;
+      font-size: 14px;
+      color: #ff3948;
+    }
+    header a {
+      color: #bbb;
+      text-decoration: none;
+      font-size: 13px;
+    }
+    #netplay-bar {
+      background: #191f33;
+      padding: 8px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      border-bottom: 1px solid #292e3d;
+    }
+    .net-btn {
+      background: #f32e40;
+      color: white;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .net-input {
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid #444;
+      background: #0d111a;
+      color: white;
+      font-size: 13px;
+      width: 140px;
+    }
+    #game-frame {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <span>Cadillacs &amp; Dinosaurs (Netplay Room)</span>
+    <a href="index.html">← Back to Arcade</a>
+  </header>
+
+  <div id="netplay-bar">
+    <span>Online Co-op:</span>
+    <button class="net-btn" onclick="startHost()">Host Room</button>
+    <input type="text" id="join-id" class="net-input" placeholder="Enter Host Code">
+    <button class="net-btn" style="background:#28a745;" onclick="joinHost()">Join Room</button>
+  </div>
+
+  <iframe id="game-frame" src="" allow="autoplay; gamepad; fullscreen"></iframe>
+
+  <script>
+    const romUrl = window.location.origin + '/dino.zip';
+    const basePlayer = 'https://web.libretro.com/?core=fbneo&rom=' + encodeURIComponent(romUrl);
+
+    // Initial load
+    document.getElementById('game-frame').src = basePlayer;
+
+    function startHost() {
+      const roomCode = 'dino-' + Math.floor(1000 + Math.random() * 9000);
+      alert('Room Created!\nYour Room Code is: ' + roomCode + '\nAsk Player 2 to enter this code.');
+      document.getElementById('game-frame').src = basePlayer + '&netplay=host&room=' + roomCode;
+    }
+
+    function joinHost() {
+      const code = document.getElementById('join-id').value.trim();
+      if (!code) {
+        alert('Please enter a Host Room Code!');
+        return;
+      }
+      document.getElementById('game-frame').src = basePlayer + '&netplay=client&room=' + encodeURIComponent(code);
+    }
+  </script>
+</body>
+</html>
