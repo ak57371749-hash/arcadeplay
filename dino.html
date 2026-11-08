@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cadillacs &amp; Dinosaurs (Multiplayer) - ArcadePlay</title>
+  <title>Cadillacs &amp; Dinosaurs (2-Player Online) - ArcadePlay</title>
   <style>
     * {
       box-sizing: border-box;
@@ -36,31 +36,28 @@
     }
     .nav-actions {
       display: flex;
-      gap: 12px;
+      gap: 10px;
       align-items: center;
     }
     header span {
       color: #fff;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: bold;
     }
     .btn-fs {
       background: #ff3948;
       color: #fff;
       border: none;
-      padding: 5px 12px;
+      padding: 5px 10px;
       border-radius: 5px;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: bold;
       cursor: pointer;
     }
     .btn-back {
       color: #bbb;
       text-decoration: none;
-      font-size: 13px;
-    }
-    .btn-back:hover {
-      color: #ff3948;
+      font-size: 12px;
     }
     #game-container {
       width: 100%;
@@ -82,7 +79,7 @@
 <body>
 
   <header>
-    <span>Cadillacs &amp; Dinosaurs (Online Co-op)</span>
+    <span>Dino 2-Player (Online)</span>
     <div class="nav-actions">
       <button class="btn-fs" onclick="toggleFullScreen()">⛶ Fullscreen</button>
       <a href="index.html" class="btn-back">← Back</a>
@@ -111,7 +108,7 @@
       }
     }
 
-    // EmulatorJS Settings with Netplay Enabled
+    // EmulatorJS Online Multiplayer Configuration
     window.EJS_player = '#game';
     window.EJS_core = 'arcade';
     window.EJS_gameName = 'dino';
@@ -119,7 +116,8 @@
     window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
     window.EJS_startOnLoaded = true;
     
-    // Multiplayer (Netplay) configuration
+    // WebRTC Peer-to-Peer Netplay Setup
+    window.EJS_netplayUrl = 'https://netplay.emulatorjs.org';
     window.EJS_netplayServer = 'https://netplay.emulatorjs.org';
   </script>
   <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
