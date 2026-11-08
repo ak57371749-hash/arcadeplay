@@ -23,7 +23,7 @@
     }
     header {
       width: 100%;
-      padding: 10px 16px;
+      padding: 8px 16px;
       background: #111522;
       border-bottom: 1px solid #252938;
       display: flex;
@@ -32,17 +32,35 @@
       position: absolute;
       top: 0;
       left: 0;
-      z-index: 10;
+      z-index: 20;
     }
-    header a {
-      color: #ff3948;
-      text-decoration: none;
-      font-weight: bold;
-      font-size: 14px;
+    .nav-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
     }
     header span {
       color: #fff;
       font-size: 14px;
+      font-weight: bold;
+    }
+    .btn-fs {
+      background: #ff3948;
+      color: #fff;
+      border: none;
+      padding: 5px 12px;
+      border-radius: 5px;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .btn-back {
+      color: #bbb;
+      text-decoration: none;
+      font-size: 13px;
+    }
+    .btn-back:hover {
+      color: #ff3948;
     }
     #game-container {
       width: 100%;
@@ -51,6 +69,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      background-color: #000;
     }
     #game {
       width: 100%;
@@ -64,7 +83,10 @@
 
   <header>
     <span>Cadillacs &amp; Dinosaurs</span>
-    <a href="index.html">← Back to Arcade</a>
+    <div class="nav-actions">
+      <button class="btn-fs" onclick="toggleFullScreen()">⛶ Fullscreen</button>
+      <a href="index.html" class="btn-back">← Back</a>
+    </div>
   </header>
 
   <div id="game-container">
@@ -72,6 +94,23 @@
   </div>
 
   <script>
+    function toggleFullScreen() {
+      const container = document.getElementById('game-container');
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        if (container.requestFullscreen) {
+          container.requestFullscreen();
+        } else if (container.webkitRequestFullscreen) {
+          container.webkitRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
+      }
+    }
+
     window.EJS_player = '#game';
     window.EJS_core = 'arcade';
     window.EJS_gameName = 'dino';
