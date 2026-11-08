@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Cadillacs &amp; Dinosaurs - 2-Player Co-op</title>
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
     * {
       box-sizing: border-box;
@@ -26,7 +25,7 @@
     }
     header {
       width: 100%;
-      height: 40px;
+      height: 38px;
       background: #111522;
       border-bottom: 1px solid #252938;
       display: flex;
@@ -49,6 +48,7 @@
       border-bottom: 1px solid #2e354b;
       padding: 6px 10px;
       display: flex;
+      flex-wrap: wrap;
       gap: 8px;
       align-items: center;
       justify-content: center;
@@ -78,7 +78,7 @@
       position: relative;
       overflow: hidden;
     }
-    #game-box {
+    #game {
       width: 100%;
       height: 100%;
       max-width: 960px;
@@ -90,9 +90,13 @@
       height: 100%;
       object-fit: contain;
       background: #000;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 10;
     }
 
-    /* Player 2 On-Screen Gamepad */
+    /* Player 2 On-Screen Touch Controls */
     #p2-controls {
       display: none;
       position: absolute;
@@ -108,20 +112,20 @@
       touch-action: none;
     }
 
-    /* D-PAD */
+    /* D-PAD (Left) */
     .dpad-container {
       position: absolute;
-      left: 15px;
-      bottom: 15px;
-      width: 140px;
-      height: 140px;
+      left: 14px;
+      bottom: 14px;
+      width: 136px;
+      height: 136px;
     }
     .dpad-btn {
       position: absolute;
       width: 44px;
       height: 44px;
       background: rgba(255, 255, 255, 0.25);
-      border: 2px solid rgba(255, 255, 255, 0.45);
+      border: 2px solid rgba(255, 255, 255, 0.5);
       border-radius: 8px;
       color: #fff;
       font-size: 18px;
@@ -130,18 +134,18 @@
       justify-content: center;
     }
     .dpad-btn:active { background: rgba(255, 57, 72, 0.8); }
-    .btn-up { top: 0; left: 48px; }
-    .btn-down { bottom: 0; left: 48px; }
-    .btn-left { top: 48px; left: 0; }
-    .btn-right { top: 48px; right: 0; }
+    .btn-up { top: 0; left: 46px; }
+    .btn-down { bottom: 0; left: 46px; }
+    .btn-left { top: 46px; left: 0; }
+    .btn-right { top: 46px; right: 0; }
 
-    /* ACTION BUTTONS */
+    /* ACTION BUTTONS (Right) */
     .action-container {
       position: absolute;
-      right: 15px;
-      bottom: 20px;
+      right: 14px;
+      bottom: 18px;
       display: flex;
-      gap: 15px;
+      gap: 14px;
     }
     .act-circle {
       width: 60px;
@@ -162,7 +166,7 @@
     }
     .act-circle:active { transform: scale(0.92); }
 
-    /* COIN & START */
+    /* COIN & START (Top Center) */
     .sys-container {
       position: absolute;
       top: 10px;
@@ -197,17 +201,17 @@
     <button class="btn-m" id="host-btn" onclick="startHost()">👑 Host (P1)</button>
     <input type="text" id="room-code" class="room-input" placeholder="Room Code">
     <button class="btn-m btn-join" id="join-btn" onclick="startJoin()">🎮 Join (P2)</button>
-    <span id="status-text">Select Host on Device 1 or Join on Device 2</span>
+    <span id="status-text">Device 1: Host dabao | Device 2: Code dalkar Join dabao</span>
   </div>
 
   <div id="viewport">
-    <!-- Host Screen -->
-    <div id="game-box"></div>
+    <!-- Emulator container (Device 1 Host) -->
+    <div id="game"></div>
 
-    <!-- Client Screen (Player 2 Stream) -->
-    <video id="p2-screen" autoplay playsinline></video>
+    <!-- Live Stream Screen (Device 2 Client) -->
+    <video id="p2-screen" autoplay playsinline muted></video>
 
-    <!-- Player 2 Virtual Gamepad Overlay -->
+    <!-- Player 2 Touch Gamepad -->
     <div id="p2-controls">
       <div class="dpad-container">
         <div class="dpad-btn btn-up touch-btn" data-key="ArrowUp">▲</div>
@@ -228,10 +232,11 @@
     </div>
   </div>
 
-  <script>
-    let peer = null;
-    let conn = null;
+  <!-- PeerJS WebRTC Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
 
+  <!-- EmulatorJS Configuration (Always load directly so game never freezes) -->
+  <script>
     function toggleFullScreen() {
       const el = document.getElementById('viewport');
       if (!document.fullscreenElement && !document.webkitFullscreenElement) {
@@ -243,11 +248,142 @@
       }
     }
 
-    // 1. Host Setup (Device 1)
+    window.EJS_player = '#game';
+    window.EJS_core = 'arcade';
+    window.EJS_gameName = 'dino';
+    window.EJS_gameUrl = 'dino.zip';
+    window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+    window.EJS_startOnLoaded = true;
+
+    let peer = null;
+    let conn = null;
+
+    // 1. Host Game (Device 1)
     function startHost() {
-      const code = 'dino-' + Math.floor(1000 + Math.random() * 9000);
+      if (typeof Peer === 'undefined') {
+        alert('Network library loading, please wait 3 seconds and tap again.');
+        return;
+      }
+      const code = 'dino' + Math.floor(1000 + Math.random() * 9000);
       document.getElementById('status-text').innerText = 'Creating room...';
 
       peer = new Peer(code);
       peer.on('open', (id) => {
-        document.getElementById('status-text').innerHTML = 'Room Code: <b style="color:#00ff99;font-size:13
+        document.getElementById('status-text').innerHTML = 'Room Code: <b style="color:#00ff99;font-size:13px;">' + id + '</b>';
+        hideRoomBar();
+      });
+
+      peer.on('error', (err) => {
+        document.getElementById('status-text').innerText = 'Error: ' + err.type;
+      });
+
+      peer.on('connection', (c) => {
+        conn = c;
+        document.getElementById('status-text').innerText = 'Player 2 Connected! Ready.';
+
+        conn.on('data', (data) => {
+          if (data && data.key) {
+            injectKeyToHost(data.key, data.down);
+          }
+        });
+
+        // Start video stream to Player 2
+        const checkCanvas = setInterval(() => {
+          const canvas = document.querySelector('#game canvas');
+          if (canvas && canvas.captureStream) {
+            clearInterval(checkCanvas);
+            const stream = canvas.captureStream(30);
+            peer.call(conn.peer, stream);
+          }
+        }, 500);
+      });
+    }
+
+    // 2. Join Game (Device 2)
+    function startJoin() {
+      if (typeof Peer === 'undefined') {
+        alert('Network library loading, please wait 3 seconds and tap again.');
+        return;
+      }
+      const target = document.getElementById('room-code').value.trim();
+      if (!target) {
+        alert('Please enter Room Code first!');
+        return;
+      }
+      document.getElementById('status-text').innerText = 'Connecting to Host...';
+
+      peer = new Peer();
+      peer.on('open', () => {
+        conn = peer.connect(target);
+        conn.on('open', () => {
+          document.getElementById('status-text').innerText = 'Connected! Use controls below to play.';
+          hideRoomBar();
+
+          // Stop local canvas, show video stream & controls
+          document.getElementById('game').style.display = 'none';
+          document.getElementById('p2-screen').style.display = 'block';
+          document.getElementById('p2-controls').style.display = 'block';
+
+          bindP2Controls();
+        });
+      });
+
+      peer.on('call', (call) => {
+        call.answer();
+        call.on('stream', (stream) => {
+          const video = document.getElementById('p2-screen');
+          video.srcObject = stream;
+          video.play();
+        });
+      });
+    }
+
+    function hideRoomBar() {
+      document.getElementById('host-btn').style.display = 'none';
+      document.getElementById('join-btn').style.display = 'none';
+      document.getElementById('room-code').style.display = 'none';
+    }
+
+    function bindP2Controls() {
+      document.querySelectorAll('.touch-btn').forEach(btn => {
+        const key = btn.getAttribute('data-key');
+        const send = (isDown) => {
+          if (conn && conn.open) conn.send({ key: key, down: isDown });
+        };
+
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); send(true); }, { passive: false });
+        btn.addEventListener('touchend', (e) => { e.preventDefault(); send(false); }, { passive: false });
+        btn.addEventListener('mousedown', (e) => { e.preventDefault(); send(true); });
+        btn.addEventListener('mouseup', (e) => { e.preventDefault(); send(false); });
+      });
+    }
+
+    // Injects Player 2 keys into Host Emulator
+    function injectKeyToHost(code, isDown) {
+      const p2Map = {
+        'Digit6': 'Digit6', // Coin 2
+        'Digit2': 'Digit2', // Start 2
+        'ArrowUp': 'KeyR',
+        'ArrowDown': 'KeyF',
+        'ArrowLeft': 'KeyD',
+        'ArrowRight': 'KeyG',
+        'KeyA': 'KeyA',     // Attack 2
+        'KeyS': 'KeyS'      // Jump 2
+      };
+
+      const mapped = p2Map[code] || code;
+      const evt = new KeyboardEvent(isDown ? 'keydown' : 'keyup', {
+        bubbles: true, cancelable: true, code: mapped, key: mapped
+      });
+      window.dispatchEvent(evt);
+      document.dispatchEvent(evt);
+      const canvas = document.querySelector('#game canvas');
+      if (canvas) canvas.dispatchEvent(evt);
+    }
+  </script>
+
+  <!-- Static Loader: Game will always load immediately -->
+  <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
+
+</body>
+</html>
