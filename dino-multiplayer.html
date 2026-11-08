@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Cadillacs &amp; Dinosaurs - 2-Player Co-op</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
   <style>
     * {
       box-sizing: border-box;
@@ -96,7 +97,7 @@
       z-index: 10;
     }
 
-    /* Isolated Player 2 Gamepad */
+    /* Player 2 Touch Gamepad */
     #p2-controls {
       display: none;
       position: absolute;
@@ -133,7 +134,7 @@
       align-items: center;
       justify-content: center;
     }
-    .dpad-btn.active { background: rgba(255, 57, 72, 0.85); }
+    .dpad-btn:active, .dpad-btn.active { background: rgba(255, 57, 72, 0.85); }
     .btn-up { top: 0; left: 47px; }
     .btn-down { bottom: 0; left: 47px; }
     .btn-left { top: 47px; left: 0; }
@@ -164,7 +165,7 @@
       background: rgba(255, 57, 72, 0.55);
       border-color: #ff3948;
     }
-    .act-circle.active { transform: scale(0.92); filter: brightness(1.4); }
+    .act-circle:active, .act-circle.active { transform: scale(0.92); filter: brightness(1.4); }
 
     /* COIN & START */
     .sys-container {
@@ -184,7 +185,7 @@
       font-size: 11px;
       font-weight: bold;
     }
-    .sys-pill.active { background: #ff3948; }
+    .sys-pill:active, .sys-pill.active { background: #ff3948; }
   </style>
 </head>
 <body>
@@ -208,29 +209,26 @@
     <div id="game"></div>
     <video id="p2-screen" autoplay playsinline muted></video>
 
-    <!-- Player 2 Gamepad -->
+    <!-- Player 2 Touch Gamepad with explicit event codes -->
     <div id="p2-controls">
       <div class="dpad-container">
-        <div class="dpad-btn btn-up touch-btn" data-btn="12">▲</div>
-        <div class="dpad-btn btn-down touch-btn" data-btn="13">▼</div>
-        <div class="dpad-btn btn-left touch-btn" data-key="14">◀</div>
-        <div class="dpad-btn btn-right touch-btn" data-btn="15">▶</div>
+        <div class="dpad-btn btn-up touch-btn" data-key="KeyR">▲</div>
+        <div class="dpad-btn btn-down touch-btn" data-key="KeyF">▼</div>
+        <div class="dpad-btn btn-left touch-btn" data-key="KeyD">◀</div>
+        <div class="dpad-btn btn-right touch-btn" data-key="KeyG">▶</div>
       </div>
 
       <div class="sys-container">
-        <button class="sys-pill touch-btn" data-btn="8">🪙 INSERT COIN</button>
-        <button class="sys-pill touch-btn" data-btn="9">START 2P</button>
+        <button class="sys-pill touch-btn" data-key="Digit6">🪙 INSERT COIN</button>
+        <button class="sys-pill touch-btn" data-key="Digit2">START 2P</button>
       </div>
 
       <div class="action-container">
-        <div class="act-circle touch-btn" data-btn="0">JUMP</div>
-        <div class="act-circle att touch-btn" data-btn="1">ATTACK</div>
+        <div class="act-circle touch-btn" data-key="KeyS">JUMP</div>
+        <div class="act-circle att touch-btn" data-key="KeyA">ATTACK</div>
       </div>
     </div>
   </div>
-
-  <!-- PeerJS -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
 
   <script>
     function toggleFullScreen() {
@@ -244,6 +242,7 @@
       }
     }
 
+    // EmulatorJS Settings
     window.EJS_player = '#game';
     window.EJS_core = 'arcade';
     window.EJS_gameName = 'dino';
@@ -253,12 +252,6 @@
 
     let peer = null;
     let conn = null;
-
-    // Virtual Gamepad State for Player 2 (Index 1)
-    const p2GamepadState = {
-      buttons: new Array(16).fill(0),
-      axes: [0, 0, 0, 0]
-    };
 
     // 1. Host Game (Device 1)
     function startHost() {
@@ -275,19 +268,21 @@
         hideRoomBar();
       });
 
+      peer.on('error', (err) => {
+        document.getElementById('status-text').innerText = 'Error: ' + err.type;
+      });
+
       peer.on('connection', (c) => {
         conn = c;
         document.getElementById('status-text').innerText = 'Player 2 Connected! Ready.';
 
-        // Hook virtual gamepad for Player 2
-        setupP2VirtualGamepadHook();
-
         conn.on('data', (data) => {
-          if (data && data.btn !== undefined) {
-            updateP2Button(parseInt(data.btn), data.down);
+          if (data && data.code) {
+            sendSDLKey(data.code, data.down);
           }
         });
 
+        // Start video stream to Player 2
         const checkCanvas = setInterval(() => {
           const canvas = document.querySelector('#game canvas');
           if (canvas && canvas.captureStream) {
@@ -323,7 +318,7 @@
           document.getElementById('p2-screen').style.display = 'block';
           document.getElementById('p2-controls').style.display = 'block';
 
-          setupButtonHandlers();
+          setupTouchControls();
         });
       });
 
@@ -343,77 +338,82 @@
       document.getElementById('room-code').style.display = 'none';
     }
 
-    // Touch Event Handlers with single button isolation
-    function setupButtonHandlers() {
+    // Touch event isolation: har touch apne button ko track karega
+    function setupTouchControls() {
       const buttons = document.querySelectorAll('.touch-btn');
 
       buttons.forEach(btn => {
-        const btnId = btn.getAttribute('data-btn') || btn.getAttribute('data-key');
+        const keyCode = btn.getAttribute('data-key');
 
-        const sendBtn = (isDown) => {
+        const press = (isDown) => {
           if (isDown) btn.classList.add('active');
           else btn.classList.remove('active');
 
           if (conn && conn.open) {
-            conn.send({ btn: btnId, down: isDown });
+            conn.send({ code: keyCode, down: isDown });
           }
         };
 
         btn.addEventListener('touchstart', (e) => {
           e.preventDefault();
-          e.stopPropagation();
-          sendBtn(true);
+          press(true);
         }, { passive: false });
 
         btn.addEventListener('touchend', (e) => {
           e.preventDefault();
-          e.stopPropagation();
-          sendBtn(false);
+          press(false);
         }, { passive: false });
 
         btn.addEventListener('touchcancel', (e) => {
           e.preventDefault();
-          e.stopPropagation();
-          sendBtn(false);
+          press(false);
         }, { passive: false });
+
+        btn.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          press(true);
+        });
+
+        btn.addEventListener('mouseup', (e) => {
+          e.preventDefault();
+          press(false);
+        });
       });
     }
 
-    // Host updates Player 2 state
-    function updateP2Button(buttonIndex, isDown) {
-      if (p2GamepadState.buttons[buttonIndex] !== undefined) {
-        p2GamepadState.buttons[buttonIndex] = isDown ? 1 : 0;
+    // Direct SDL / Keyboard Event Dispatch to Canvas
+    const keyDataMap = {
+      'Digit6':   { keyCode: 54, which: 54, key: '6' },
+      'Digit2':   { keyCode: 50, which: 50, key: '2' },
+      'KeyR':     { keyCode: 82, which: 82, key: 'r' },
+      'KeyF':     { keyCode: 70, which: 70, key: 'f' },
+      'KeyD':     { keyCode: 68, which: 68, key: 'd' },
+      'KeyG':     { keyCode: 71, which: 71, key: 'g' },
+      'KeyA':     { keyCode: 65, which: 65, key: 'a' },
+      'KeyS':     { keyCode: 83, which: 83, key: 's' }
+    };
+
+    function sendSDLKey(code, isDown) {
+      const info = keyDataMap[code];
+      if (!info) return;
+
+      const evtType = isDown ? 'keydown' : 'keyup';
+      const event = new KeyboardEvent(evtType, {
+        bubbles: true,
+        cancelable: true,
+        code: code,
+        key: info.key,
+        keyCode: info.keyCode,
+        which: info.which
+      });
+
+      // Target canvas directly
+      const canvas = document.querySelector('#game canvas') || document.querySelector('canvas');
+      if (canvas) {
+        canvas.dispatchEvent(event);
       }
-      // D-Pad to axes fallback
-      if (buttonIndex === 14) p2GamepadState.axes[0] = isDown ? -1 : 0; // Left
-      if (buttonIndex === 15) p2GamepadState.axes[0] = isDown ? 1 : 0;  // Right
-      if (buttonIndex === 12) p2GamepadState.axes[1] = isDown ? -1 : 0; // Up
-      if (buttonIndex === 13) p2GamepadState.axes[1] = isDown ? 1 : 0;  // Down
-    }
-
-    // Overrides navigator.getGamepads so emulator core gets real 2nd gamepad
-    function setupP2VirtualGamepadHook() {
-      const originalGetGamepads = navigator.getGamepads ? navigator.getGamepads.bind(navigator) : () => [];
-
-      navigator.getGamepads = function() {
-        const pads = Array.from(originalGetGamepads() || []);
-        
-        // Slot 1 (Player 2)
-        pads[1] = {
-          id: 'Virtual Player 2 Arcade Controller',
-          index: 1,
-          connected: true,
-          timestamp: performance.now(),
-          mapping: 'standard',
-          axes: p2GamepadState.axes,
-          buttons: p2GamepadState.buttons.map(val => ({
-            pressed: val === 1,
-            value: val
-          }))
-        };
-
-        return pads;
-      };
+      window.dispatchEvent(event);
+      document.dispatchEvent(event);
     }
   </script>
 
