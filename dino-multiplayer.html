@@ -4,24 +4,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Cadillacs &amp; Dinosaurs - 2P Online Co-op</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
   <style>
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
     }
     body, html {
       width: 100%;
       height: 100%;
-      background: #000;
-      color: #fff;
-      font-family: Arial, sans-serif;
+      background-color: #000;
       overflow: hidden;
       display: flex;
       flex-direction: column;
+      font-family: Arial, sans-serif;
+      color: #fff;
     }
     header {
-      height: 40px;
+      width: 100%;
+      height: 38px;
       background: #111522;
       border-bottom: 1px solid #252938;
       display: flex;
@@ -30,7 +35,7 @@
       padding: 0 12px;
       z-index: 50;
     }
-    .title { color: #ff3948; font-size: 13px; font-weight: bold; }
+    .header-left { color: #ff3948; font-size: 13px; font-weight: bold; }
     .header-actions { display: flex; gap: 8px; align-items: center; }
     .btn-fs {
       background: #ff3948; color: #fff; border: none;
@@ -39,54 +44,362 @@
     }
     .btn-back { color: #bbb; text-decoration: none; font-size: 12px; }
 
-    #frame-container {
+    #room-bar {
+      background: #181d2d;
+      border-bottom: 1px solid #2e354b;
+      padding: 6px 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      z-index: 45;
+    }
+    .btn-m {
+      background: #f32e40; color: #fff; border: none;
+      padding: 5px 12px; border-radius: 6px; font-weight: bold;
+      font-size: 12px; cursor: pointer;
+    }
+    .btn-join { background: #28a745; }
+    .room-input {
+      background: #0d111a; border: 1px solid #555; color: #fff;
+      padding: 5px 8px; border-radius: 6px; width: 110px;
+      font-size: 12px; text-align: center;
+    }
+    #status-text { color: #ffbc00; font-size: 11px; }
+
+    #viewport {
+      width: 100%;
       flex: 1;
-      width: 100%;
-      height: 100%;
-      position: relative;
-    }
-    iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
+      display: flex;
+      justify-content: center;
+      align-items: center;
       background: #000;
+      position: relative;
+      overflow: hidden;
     }
+    #game {
+      width: 100%;
+      height: 100%;
+      max-width: 960px;
+      max-height: 720px;
+    }
+    #p2-screen {
+      display: none;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #000;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 10;
+    }
+
+    /* Player 2 On-Screen Touch Controls */
+    #p2-controls {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 100;
+      pointer-events: none;
+    }
+    .touch-btn {
+      pointer-events: auto;
+      touch-action: none;
+    }
+
+    /* D-PAD (Left) */
+    .dpad-container {
+      position: absolute;
+      left: 14px;
+      bottom: 14px;
+      width: 144px;
+      height: 144px;
+    }
+    .dpad-btn {
+      position: absolute;
+      width: 46px;
+      height: 46px;
+      background: rgba(255, 255, 255, 0.22);
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .dpad-btn:active, .dpad-btn.active { background: rgba(255, 57, 72, 0.85); }
+    .btn-up { top: 0; left: 49px; }
+    .btn-down { bottom: 0; left: 49px; }
+    .btn-left { top: 49px; left: 0; }
+    .btn-right { top: 49px; right: 0; }
+
+    /* ACTION BUTTONS (Right) */
+    .action-container {
+      position: absolute;
+      right: 16px;
+      bottom: 20px;
+      display: flex;
+      gap: 16px;
+    }
+    .act-circle {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.25);
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .act-circle.att {
+      background: rgba(255, 57, 72, 0.5);
+      border-color: #ff3948;
+    }
+    .act-circle:active, .act-circle.active { transform: scale(0.92); filter: brightness(1.4); }
+
+    /* COIN & START (Top Center) */
+    .sys-container {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 12px;
+    }
+    .sys-pill {
+      background: rgba(17, 21, 34, 0.85);
+      border: 1px solid #ff3948;
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: bold;
+    }
+    .sys-pill:active, .sys-pill.active { background: #ff3948; }
   </style>
 </head>
 <body>
 
   <header>
-    <div class="title">Cadillacs &amp; Dinosaurs (Online Co-op)</div>
+    <div class="header-left">Dino 2P Co-op</div>
     <div class="header-actions">
       <button class="btn-fs" onclick="toggleFullScreen()">⛶ Fullscreen</button>
       <a href="index.html" class="btn-back">← Back</a>
     </div>
   </header>
 
-  <div id="frame-container">
-    <iframe id="retro-player" allow="autoplay; gamepad; fullscreen; cross-origin-isolated"></iframe>
+  <div id="room-bar">
+    <button class="btn-m" id="host-btn" onclick="startHost()">👑 Host (P1)</button>
+    <input type="text" id="room-code" class="room-input" placeholder="Room Code">
+    <button class="btn-m btn-join" id="join-btn" onclick="startJoin()">🎮 Join (P2)</button>
+    <span id="status-text">Device 1: Host dabao | Device 2: Code dalkar Join dabao</span>
+  </div>
+
+  <div id="viewport">
+    <div id="game"></div>
+    <video id="p2-screen" autoplay playsinline muted></video>
+
+    <!-- Player 2 Touch Gamepad -->
+    <div id="p2-controls">
+      <div class="dpad-container">
+        <div class="dpad-btn btn-up touch-btn" data-action="up">▲</div>
+        <div class="dpad-btn btn-down touch-btn" data-action="down">▼</div>
+        <div class="dpad-btn btn-left touch-btn" data-action="left">◀</div>
+        <div class="dpad-btn btn-right touch-btn" data-action="right">▶</div>
+      </div>
+
+      <div class="sys-container">
+        <button class="sys-pill touch-btn" data-action="coin">🪙 INSERT COIN</button>
+        <button class="sys-pill touch-btn" data-action="start">START 2P</button>
+      </div>
+
+      <div class="action-container">
+        <div class="act-circle touch-btn" data-action="jump">JUMP</div>
+        <div class="act-circle att touch-btn" data-action="attack">ATTACK</div>
+      </div>
+    </div>
   </div>
 
   <script>
     function toggleFullScreen() {
-      const container = document.getElementById('frame-container');
+      const el = document.getElementById('viewport');
       if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-        if (container.requestFullscreen) container.requestFullscreen();
-        else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
+        if (el.requestFullscreen) el.requestFullscreen();
+        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
       } else {
         if (document.exitFullscreen) document.exitFullscreen();
         else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
       }
     }
 
-    // Direct Arcade Netplay Wrapper
-    const romUrl = window.location.origin + '/dino.zip';
-    
-    // We pass our hosted dino.zip directly to the WebAssembly FBNeo Netplay instance
-    const playerUrl = 'https://emulatorjs.org/play.html?core=arcade&game=Cadillacs%20and%20Dinosaurs&rom=' + encodeURIComponent(romUrl);
-    
-    document.getElementById('retro-player').src = playerUrl;
+    // EmulatorJS Settings (Reliable static load)
+    window.EJS_player = '#game';
+    window.EJS_core = 'arcade';
+    window.EJS_gameName = 'dino';
+    window.EJS_gameUrl = 'dino.zip';
+    window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+    window.EJS_startOnLoaded = true;
+
+    let peer = null;
+    let conn = null;
+
+    // 1. Host Game (Device 1)
+    function startHost() {
+      const code = 'dino' + Math.floor(1000 + Math.random() * 9000);
+      document.getElementById('status-text').innerText = 'Creating room...';
+
+      peer = new Peer(code);
+      peer.on('open', (id) => {
+        document.getElementById('status-text').innerHTML = 'Room Code: <b style="color:#00ff99;font-size:13px;">' + id + '</b>';
+        hideRoomBar();
+      });
+
+      peer.on('connection', (c) => {
+        conn = c;
+        document.getElementById('status-text').innerText = 'Player 2 Connected! Ready.';
+
+        conn.on('data', (data) => {
+          if (data && data.action) {
+            triggerDirectP2Input(data.action, data.down);
+          }
+        });
+
+        // Send Host canvas stream to Player 2
+        const checkCanvas = setInterval(() => {
+          const canvas = document.querySelector('#game canvas');
+          if (canvas && canvas.captureStream) {
+            clearInterval(checkCanvas);
+            const stream = canvas.captureStream(30);
+            peer.call(conn.peer, stream);
+          }
+        }, 500);
+      });
+    }
+
+    // 2. Join Game (Device 2)
+    function startJoin() {
+      const target = document.getElementById('room-code').value.trim();
+      if (!target) {
+        alert('Please enter Room Code first!');
+        return;
+      }
+      document.getElementById('status-text').innerText = 'Connecting to Host...';
+
+      peer = new Peer();
+      peer.on('open', () => {
+        conn = peer.connect(target);
+        conn.on('open', () => {
+          document.getElementById('status-text').innerText = 'Connected! Use controls below.';
+          hideRoomBar();
+
+          // Hide local game engine, show Host stream + controls
+          document.getElementById('game').style.display = 'none';
+          document.getElementById('p2-screen').style.display = 'block';
+          document.getElementById('p2-controls').style.display = 'block';
+
+          setupTouchButtons();
+        });
+      });
+
+      peer.on('call', (call) => {
+        call.answer();
+        call.on('stream', (stream) => {
+          const video = document.getElementById('p2-screen');
+          video.srcObject = stream;
+          video.play();
+        });
+      });
+    }
+
+    function hideRoomBar() {
+      document.getElementById('host-btn').style.display = 'none';
+      document.getElementById('join-btn').style.display = 'none';
+      document.getElementById('room-code').style.display = 'none';
+    }
+
+    // Isolated Touch Buttons
+    function setupTouchButtons() {
+      document.querySelectorAll('.touch-btn').forEach(btn => {
+        const action = btn.getAttribute('data-action');
+
+        const send = (isDown) => {
+          if (isDown) btn.classList.add('active');
+          else btn.classList.remove('active');
+
+          if (conn && conn.open) {
+            conn.send({ action: action, down: isDown });
+          }
+        };
+
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); send(true); }, { passive: false });
+        btn.addEventListener('touchend', (e) => { e.preventDefault(); send(false); }, { passive: false });
+        btn.addEventListener('touchcancel', (e) => { e.preventDefault(); send(false); }, { passive: false });
+      });
+    }
+
+    // Direct Port 1 (Player 2) input into EmulatorJS Core
+    function triggerDirectP2Input(action, isDown) {
+      // 1. Direct EmulatorJS Controller API (if available)
+      try {
+        if (window.EJS_emulator && window.EJS_emulator.controllers) {
+          const p2 = window.EJS_emulator.controllers[1];
+          if (p2) {
+            if (action === 'coin') p2.setButtonState('select', isDown);
+            if (action === 'start') p2.setButtonState('start', isDown);
+            if (action === 'up') p2.setButtonState('up', isDown);
+            if (action === 'down') p2.setButtonState('down', isDown);
+            if (action === 'left') p2.setButtonState('left', isDown);
+            if (action === 'right') p2.setButtonState('right', isDown);
+            if (action === 'attack') p2.setButtonState('b', isDown);
+            if (action === 'jump') p2.setButtonState('a', isDown);
+            return;
+          }
+        }
+      } catch (e) {}
+
+      // 2. Direct Scancode fallback (CPS-1 / FBNeo Player 2 scancodes)
+      const actionScancodes = {
+        'coin':   { key: '6', code: 'Digit6', which: 54 },
+        'start':  { key: '2', code: 'Digit2', which: 50 },
+        'up':     { key: 'r', code: 'KeyR',   which: 82 },
+        'down':   { key: 'f', code: 'KeyF',   which: 70 },
+        'left':   { key: 'd', code: 'KeyD',   which: 68 },
+        'right':  { key: 'g', code: 'KeyG',   which: 71 },
+        'attack': { key: 'a', code: 'KeyA',   which: 65 },
+        'jump':   { key: 's', code: 'KeyS',   which: 83 }
+      };
+
+      const info = actionScancodes[action];
+      if (!info) return;
+
+      const evtType = isDown ? 'keydown' : 'keyup';
+      const evt = new KeyboardEvent(evtType, {
+        bubbles: true,
+        cancelable: true,
+        key: info.key,
+        code: info.code,
+        keyCode: info.which,
+        which: info.which
+      });
+
+      const canvas = document.querySelector('#game canvas') || window;
+      canvas.dispatchEvent(evt);
+      window.dispatchEvent(evt);
+    }
   </script>
+
+  <!-- Static Loader so game loads directly -->
+  <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
 
 </body>
 </html>
