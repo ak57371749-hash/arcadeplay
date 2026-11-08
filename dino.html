@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cadillacs &amp; Dinosaurs - ArcadePlay</title>
+  <title>Cadillacs &amp; Dinosaurs (Multiplayer) - ArcadePlay</title>
   <style>
     * {
       box-sizing: border-box;
@@ -82,7 +82,7 @@
 <body>
 
   <header>
-    <span>Cadillacs &amp; Dinosaurs</span>
+    <span>Cadillacs &amp; Dinosaurs (Online Co-op)</span>
     <div class="nav-actions">
       <button class="btn-fs" onclick="toggleFullScreen()">⛶ Fullscreen</button>
       <a href="index.html" class="btn-back">← Back</a>
@@ -111,12 +111,16 @@
       }
     }
 
+    // EmulatorJS Settings with Netplay Enabled
     window.EJS_player = '#game';
     window.EJS_core = 'arcade';
     window.EJS_gameName = 'dino';
     window.EJS_gameUrl = 'dino.zip';
     window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
     window.EJS_startOnLoaded = true;
+    
+    // Multiplayer (Netplay) configuration
+    window.EJS_netplayServer = 'https://netplay.emulatorjs.org';
   </script>
   <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
 
