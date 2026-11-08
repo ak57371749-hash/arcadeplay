@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Cadillacs &amp; Dinosaurs - 2P Online Co-op</title>
+  <title>Cadillacs &amp; Dinosaurs - 2P WASM Hook</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
   <style>
     * {
@@ -113,7 +113,7 @@
       touch-action: none;
     }
 
-    /* D-PAD (Left) */
+    /* D-PAD */
     .dpad-container {
       position: absolute;
       left: 14px;
@@ -125,7 +125,7 @@
       position: absolute;
       width: 46px;
       height: 46px;
-      background: rgba(255, 255, 255, 0.22);
+      background: rgba(255, 255, 255, 0.25);
       border: 2px solid rgba(255, 255, 255, 0.5);
       border-radius: 10px;
       color: #fff;
@@ -140,7 +140,7 @@
     .btn-left { top: 49px; left: 0; }
     .btn-right { top: 49px; right: 0; }
 
-    /* ACTION BUTTONS (Right) */
+    /* ACTION BUTTONS */
     .action-container {
       position: absolute;
       right: 16px;
@@ -167,7 +167,7 @@
     }
     .act-circle:active, .act-circle.active { transform: scale(0.92); filter: brightness(1.4); }
 
-    /* COIN & START (Top Center) */
+    /* COIN & START */
     .sys-container {
       position: absolute;
       top: 10px;
@@ -191,7 +191,7 @@
 <body>
 
   <header>
-    <div class="header-left">Dino 2P Co-op</div>
+    <div class="header-left">Dino 2P Co-op (WASM Netplay)</div>
     <div class="header-actions">
       <button class="btn-fs" onclick="toggleFullScreen()">⛶ Fullscreen</button>
       <a href="index.html" class="btn-back">← Back</a>
@@ -212,20 +212,20 @@
     <!-- Player 2 Touch Gamepad -->
     <div id="p2-controls">
       <div class="dpad-container">
-        <div class="dpad-btn btn-up touch-btn" data-action="up">▲</div>
-        <div class="dpad-btn btn-down touch-btn" data-action="down">▼</div>
-        <div class="dpad-btn btn-left touch-btn" data-action="left">◀</div>
-        <div class="dpad-btn btn-right touch-btn" data-action="right">▶</div>
+        <div class="dpad-btn btn-up touch-btn" data-scancode="114" data-key="KeyR">▲</div>
+        <div class="dpad-btn btn-down touch-btn" data-scancode="102" data-key="KeyF">▼</div>
+        <div class="dpad-btn btn-left touch-btn" data-scancode="100" data-key="KeyD">◀</div>
+        <div class="dpad-btn btn-right touch-btn" data-scancode="103" data-key="KeyG">▶</div>
       </div>
 
       <div class="sys-container">
-        <button class="sys-pill touch-btn" data-action="coin">🪙 INSERT COIN</button>
-        <button class="sys-pill touch-btn" data-action="start">START 2P</button>
+        <button class="sys-pill touch-btn" data-scancode="54" data-key="Digit6">🪙 INSERT COIN</button>
+        <button class="sys-pill touch-btn" data-scancode="50" data-key="Digit2">START 2P</button>
       </div>
 
       <div class="action-container">
-        <div class="act-circle touch-btn" data-action="jump">JUMP</div>
-        <div class="act-circle att touch-btn" data-action="attack">ATTACK</div>
+        <div class="act-circle touch-btn" data-scancode="115" data-key="KeyS">JUMP</div>
+        <div class="act-circle att touch-btn" data-scancode="97" data-key="KeyA">ATTACK</div>
       </div>
     </div>
   </div>
@@ -242,7 +242,7 @@
       }
     }
 
-    // EmulatorJS Settings (Reliable static load)
+    // Direct EmulatorJS Settings
     window.EJS_player = '#game';
     window.EJS_core = 'arcade';
     window.EJS_gameName = 'dino';
@@ -269,8 +269,8 @@
         document.getElementById('status-text').innerText = 'Player 2 Connected! Ready.';
 
         conn.on('data', (data) => {
-          if (data && data.action) {
-            triggerDirectP2Input(data.action, data.down);
+          if (data) {
+            injectToWASM(data.scancode, data.key, data.down);
           }
         });
 
@@ -302,12 +302,11 @@
           document.getElementById('status-text').innerText = 'Connected! Use controls below.';
           hideRoomBar();
 
-          // Hide local game engine, show Host stream + controls
           document.getElementById('game').style.display = 'none';
           document.getElementById('p2-screen').style.display = 'block';
           document.getElementById('p2-controls').style.display = 'block';
 
-          setupTouchButtons();
+          setupTouchControls();
         });
       });
 
@@ -327,78 +326,58 @@
       document.getElementById('room-code').style.display = 'none';
     }
 
-    // Isolated Touch Buttons
-    function setupTouchButtons() {
+    function setupTouchControls() {
       document.querySelectorAll('.touch-btn').forEach(btn => {
-        const action = btn.getAttribute('data-action');
+        const scancode = parseInt(btn.getAttribute('data-scancode'), 10);
+        const key = btn.getAttribute('data-key');
 
-        const send = (isDown) => {
+        const press = (isDown) => {
           if (isDown) btn.classList.add('active');
           else btn.classList.remove('active');
 
           if (conn && conn.open) {
-            conn.send({ action: action, down: isDown });
+            conn.send({ scancode: scancode, key: key, down: isDown });
           }
         };
 
-        btn.addEventListener('touchstart', (e) => { e.preventDefault(); send(true); }, { passive: false });
-        btn.addEventListener('touchend', (e) => { e.preventDefault(); send(false); }, { passive: false });
-        btn.addEventListener('touchcancel', (e) => { e.preventDefault(); send(false); }, { passive: false });
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); press(true); }, { passive: false });
+        btn.addEventListener('touchend', (e) => { e.preventDefault(); press(false); }, { passive: false });
+        btn.addEventListener('touchcancel', (e) => { e.preventDefault(); press(false); }, { passive: false });
       });
     }
 
-    // Direct Port 1 (Player 2) input into EmulatorJS Core
-    function triggerDirectP2Input(action, isDown) {
-      // 1. Direct EmulatorJS Controller API (if available)
+    // Direct C++ WASM Emscripten Keyboard Handler Hook
+    function injectToWASM(scancode, keyName, isDown) {
+      // 1. Emscripten C-function Direct Call
       try {
-        if (window.EJS_emulator && window.EJS_emulator.controllers) {
-          const p2 = window.EJS_emulator.controllers[1];
-          if (p2) {
-            if (action === 'coin') p2.setButtonState('select', isDown);
-            if (action === 'start') p2.setButtonState('start', isDown);
-            if (action === 'up') p2.setButtonState('up', isDown);
-            if (action === 'down') p2.setButtonState('down', isDown);
-            if (action === 'left') p2.setButtonState('left', isDown);
-            if (action === 'right') p2.setButtonState('right', isDown);
-            if (action === 'attack') p2.setButtonState('b', isDown);
-            if (action === 'jump') p2.setButtonState('a', isDown);
-            return;
-          }
+        const mod = (window.EJS_emulator && window.EJS_emulator.game && window.EJS_emulator.game.Module) || window.Module;
+        if (mod && mod._emscripten_keyboard_event) {
+          // Emscripten keyboard event pointer injection
+          const eventType = isDown ? 1 : 2; // 1 = keydown, 2 = keyup
+          mod._emscripten_keyboard_event(eventType, scancode);
+          return;
         }
       } catch (e) {}
 
-      // 2. Direct Scancode fallback (CPS-1 / FBNeo Player 2 scancodes)
-      const actionScancodes = {
-        'coin':   { key: '6', code: 'Digit6', which: 54 },
-        'start':  { key: '2', code: 'Digit2', which: 50 },
-        'up':     { key: 'r', code: 'KeyR',   which: 82 },
-        'down':   { key: 'f', code: 'KeyF',   which: 70 },
-        'left':   { key: 'd', code: 'KeyD',   which: 68 },
-        'right':  { key: 'g', code: 'KeyG',   which: 71 },
-        'attack': { key: 'a', code: 'KeyA',   which: 65 },
-        'jump':   { key: 's', code: 'KeyS',   which: 83 }
-      };
-
-      const info = actionScancodes[action];
-      if (!info) return;
-
+      // 2. Direct Window Keyboard Dispatch fallback with SDL code
       const evtType = isDown ? 'keydown' : 'keyup';
-      const evt = new KeyboardEvent(evtType, {
+      const event = new KeyboardEvent(evtType, {
         bubbles: true,
         cancelable: true,
-        key: info.key,
-        code: info.code,
-        keyCode: info.which,
-        which: info.which
+        key: String.fromCharCode(scancode),
+        code: keyName,
+        keyCode: scancode,
+        which: scancode
       });
 
-      const canvas = document.querySelector('#game canvas') || window;
-      canvas.dispatchEvent(evt);
-      window.dispatchEvent(evt);
+      const canvas = document.querySelector('#game canvas') || document.querySelector('canvas');
+      if (canvas) {
+        canvas.dispatchEvent(event);
+      }
+      window.dispatchEvent(event);
     }
   </script>
 
-  <!-- Static Loader so game loads directly -->
   <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
 
 </body>
