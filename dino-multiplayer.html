@@ -117,45 +117,45 @@
       position: absolute;
       left: 14px;
       bottom: 14px;
-      width: 136px;
-      height: 136px;
+      width: 144px;
+      height: 144px;
     }
     .dpad-btn {
       position: absolute;
-      width: 44px;
-      height: 44px;
-      background: rgba(255, 255, 255, 0.25);
+      width: 46px;
+      height: 46px;
+      background: rgba(255, 255, 255, 0.22);
       border: 2px solid rgba(255, 255, 255, 0.5);
-      border-radius: 8px;
+      border-radius: 10px;
       color: #fff;
-      font-size: 18px;
+      font-size: 20px;
       display: flex;
       align-items: center;
       justify-content: center;
     }
-    .dpad-btn:active { background: rgba(255, 57, 72, 0.8); }
-    .btn-up { top: 0; left: 46px; }
-    .btn-down { bottom: 0; left: 46px; }
-    .btn-left { top: 46px; left: 0; }
-    .btn-right { top: 46px; right: 0; }
+    .dpad-btn.active { background: rgba(255, 57, 72, 0.85); }
+    .btn-up { top: 0; left: 49px; }
+    .btn-down { bottom: 0; left: 49px; }
+    .btn-left { top: 49px; left: 0; }
+    .btn-right { top: 49px; right: 0; }
 
     /* ACTION BUTTONS (Right) */
     .action-container {
       position: absolute;
-      right: 14px;
-      bottom: 18px;
+      right: 16px;
+      bottom: 20px;
       display: flex;
-      gap: 14px;
+      gap: 16px;
     }
     .act-circle {
-      width: 60px;
-      height: 60px;
+      width: 64px;
+      height: 64px;
       border-radius: 50%;
       background: rgba(255, 255, 255, 0.25);
       border: 2px solid rgba(255, 255, 255, 0.5);
       color: #fff;
-      font-size: 12px;
-      font-weight: bold;
+      font-size: 13px;
+      font-weight: 900;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -164,7 +164,7 @@
       background: rgba(255, 57, 72, 0.5);
       border-color: #ff3948;
     }
-    .act-circle:active { transform: scale(0.92); }
+    .act-circle.active { transform: scale(0.92); filter: brightness(1.4); }
 
     /* COIN & START (Top Center) */
     .sys-container {
@@ -184,7 +184,7 @@
       font-size: 11px;
       font-weight: bold;
     }
-    .sys-pill:active { background: #ff3948; }
+    .sys-pill.active { background: #ff3948; }
   </style>
 </head>
 <body>
@@ -205,37 +205,34 @@
   </div>
 
   <div id="viewport">
-    <!-- Emulator container (Device 1 Host) -->
     <div id="game"></div>
-
-    <!-- Live Stream Screen (Device 2 Client) -->
     <video id="p2-screen" autoplay playsinline muted></video>
 
-    <!-- Player 2 Touch Gamepad -->
+    <!-- Player 2 Touch Gamepad with Multi-touch tracking -->
     <div id="p2-controls">
       <div class="dpad-container">
-        <div class="dpad-btn btn-up touch-btn" data-key="ArrowUp">▲</div>
-        <div class="dpad-btn btn-down touch-btn" data-key="ArrowDown">▼</div>
-        <div class="dpad-btn btn-left touch-btn" data-key="ArrowLeft">◀</div>
-        <div class="dpad-btn btn-right touch-btn" data-key="ArrowRight">▶</div>
+        <div class="dpad-btn btn-up touch-btn" data-key="p2_up">▲</div>
+        <div class="dpad-btn btn-down touch-btn" data-key="p2_down">▼</div>
+        <div class="dpad-btn btn-left touch-btn" data-key="p2_left">◀</div>
+        <div class="dpad-btn btn-right touch-btn" data-key="p2_right">▶</div>
       </div>
 
       <div class="sys-container">
-        <button class="sys-pill touch-btn" data-key="Digit6">🪙 INSERT COIN</button>
-        <button class="sys-pill touch-btn" data-key="Digit2">START 2P</button>
+        <button class="sys-pill touch-btn" data-key="p2_coin">🪙 INSERT COIN</button>
+        <button class="sys-pill touch-btn" data-key="p2_start">START 2P</button>
       </div>
 
       <div class="action-container">
-        <div class="act-circle touch-btn" data-key="KeyS">JUMP</div>
-        <div class="act-circle att touch-btn" data-key="KeyA">ATTACK</div>
+        <div class="act-circle touch-btn" data-key="p2_jump">JUMP</div>
+        <div class="act-circle att touch-btn" data-key="p2_attack">ATTACK</div>
       </div>
     </div>
   </div>
 
-  <!-- PeerJS WebRTC Library -->
+  <!-- PeerJS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
 
-  <!-- EmulatorJS Configuration (Always load directly so game never freezes) -->
+  <!-- EmulatorJS -->
   <script>
     function toggleFullScreen() {
       const el = document.getElementById('viewport');
@@ -261,7 +258,7 @@
     // 1. Host Game (Device 1)
     function startHost() {
       if (typeof Peer === 'undefined') {
-        alert('Network library loading, please wait 3 seconds and tap again.');
+        alert('Network library loading, please wait 2 seconds.');
         return;
       }
       const code = 'dino' + Math.floor(1000 + Math.random() * 9000);
@@ -283,11 +280,10 @@
 
         conn.on('data', (data) => {
           if (data && data.key) {
-            injectKeyToHost(data.key, data.down);
+            triggerP2Input(data.key, data.down);
           }
         });
 
-        // Start video stream to Player 2
         const checkCanvas = setInterval(() => {
           const canvas = document.querySelector('#game canvas');
           if (canvas && canvas.captureStream) {
@@ -302,7 +298,7 @@
     // 2. Join Game (Device 2)
     function startJoin() {
       if (typeof Peer === 'undefined') {
-        alert('Network library loading, please wait 3 seconds and tap again.');
+        alert('Network library loading, please wait 2 seconds.');
         return;
       }
       const target = document.getElementById('room-code').value.trim();
@@ -316,15 +312,14 @@
       peer.on('open', () => {
         conn = peer.connect(target);
         conn.on('open', () => {
-          document.getElementById('status-text').innerText = 'Connected! Use controls below to play.';
+          document.getElementById('status-text').innerText = 'Connected! Use controls below.';
           hideRoomBar();
 
-          // Stop local canvas, show video stream & controls
           document.getElementById('game').style.display = 'none';
           document.getElementById('p2-screen').style.display = 'block';
           document.getElementById('p2-controls').style.display = 'block';
 
-          bindP2Controls();
+          setupMultiTouchControls();
         });
       });
 
@@ -336,6 +331,95 @@
           video.play();
         });
       });
+    }
+
+    function hideRoomBar() {
+      document.getElementById('host-btn').style.display = 'none';
+      document.getElementById('join-btn').style.display = 'none';
+      document.getElementById('room-code').style.display = 'none';
+    }
+
+    // Multi-touch tracking to stop key mix-up
+    function setupMultiTouchControls() {
+      const buttons = document.querySelectorAll('.touch-btn');
+
+      buttons.forEach(btn => {
+        const key = btn.getAttribute('data-key');
+
+        const press = (isDown) => {
+          if (isDown) btn.classList.add('active');
+          else btn.classList.remove('active');
+
+          if (conn && conn.open) {
+            conn.send({ key: key, down: isDown });
+          }
+        };
+
+        btn.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          press(true);
+        }, { passive: false });
+
+        btn.addEventListener('touchend', (e) => {
+          e.preventDefault();
+          press(false);
+        }, { passive: false });
+
+        btn.addEventListener('touchcancel', (e) => {
+          e.preventDefault();
+          press(false);
+        }, { passive: false });
+
+        btn.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          press(true);
+        });
+
+        btn.addEventListener('mouseup', (e) => {
+          e.preventDefault();
+          press(false);
+        });
+      });
+    }
+
+    // Direct isolated Player 2 Arcade mapping into Emulator core
+    function triggerP2Input(action, isDown) {
+      // Clean isolated RetroArch/MAME arcade P2 keyboard maps
+      const codeMap = {
+        'p2_coin':   { code: 'Digit6', keyCode: 54, key: '6' },
+        'p2_start':  { code: 'Digit2', keyCode: 50, key: '2' },
+        'p2_up':     { code: 'KeyR',   keyCode: 82, key: 'r' },
+        'p2_down':   { code: 'KeyF',   keyCode: 70, key: 'f' },
+        'p2_left':   { code: 'KeyD',   keyCode: 68, key: 'd' },
+        'p2_right':  { code: 'KeyG',   keyCode: 71, key: 'g' },
+        'p2_attack': { code: 'KeyA',   keyCode: 65, key: 'a' },
+        'p2_jump':   { code: 'KeyS',   keyCode: 83, key: 's' }
+      };
+
+      const map = codeMap[action];
+      if (!map) return;
+
+      const evtType = isDown ? 'keydown' : 'keyup';
+      const event = new KeyboardEvent(evtType, {
+        bubbles: true,
+        cancelable: true,
+        key: map.key,
+        code: map.code,
+        keyCode: map.keyCode,
+        which: map.keyCode
+      });
+
+      window.dispatchEvent(event);
+      document.dispatchEvent(event);
+      const canvas = document.querySelector('#game canvas');
+      if (canvas) canvas.dispatchEvent(event);
+    }
+  </script>
+  <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
+
+</body>
+</html>
+});
     }
 
     function hideRoomBar() {
