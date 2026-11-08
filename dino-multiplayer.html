@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Cadillacs &amp; Dinosaurs (2-Player Online Co-op) - ArcadePlay</title>
+  <title>Cadillacs &amp; Dinosaurs (2-Player Online Co-op)</title>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
     body, html {
       width: 100%; height: 100%;
       background-color: #080a12;
@@ -15,7 +15,7 @@
       font-family: Arial, sans-serif; color: #fff;
     }
     header {
-      width: 100%; height: 44px;
+      width: 100%; height: 40px;
       background: #111522; border-bottom: 1px solid #252938;
       display: flex; justify-content: space-between; align-items: center;
       padding: 0 12px; z-index: 30;
@@ -25,9 +25,9 @@
     
     #multiplayer-controls {
       background: #181d2d; border-bottom: 1px solid #2e354b;
-      padding: 8px 12px; display: flex; flex-wrap: wrap;
+      padding: 6px 12px; display: flex; flex-wrap: wrap;
       gap: 8px; align-items: center; justify-content: center;
-      z-index: 25; font-size: 13px;
+      z-index: 25; font-size: 12px;
     }
     .btn-m {
       background: #f32e40; color: #fff; border: none;
@@ -49,11 +49,62 @@
     }
     #game { width: 100%; height: 100%; max-width: 960px; max-height: 720px; }
     
-    /* Stream for Client/Player 2 */
     #client-view {
       display: none; width: 100%; height: 100%;
       object-fit: contain; background: #000;
     }
+
+    /* Player 2 Virtual Gamepad */
+    #p2-gamepad {
+      display: none; position: absolute;
+      bottom: 10px; left: 0; width: 100%;
+      height: 200px; pointer-events: none; z-index: 50;
+    }
+    .gp-touch {
+      pointer-events: auto;
+      touch-action: manipulation;
+    }
+    /* D-PAD */
+    .dpad {
+      position: absolute; left: 20px; bottom: 20px;
+      width: 130px; height: 130px;
+    }
+    .d-btn {
+      position: absolute; width: 42px; height: 42px;
+      background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.4);
+      border-radius: 8px; color: #fff; font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .d-btn:active { background: rgba(255,57,72,0.6); }
+    .d-up { top: 0; left: 44px; }
+    .d-down { bottom: 0; left: 44px; }
+    .d-left { top: 44px; left: 0; }
+    .d-right { top: 44px; right: 0; }
+
+    /* ACTION BUTTONS */
+    .action-btns {
+      position: absolute; right: 20px; bottom: 25px;
+      display: flex; gap: 15px;
+    }
+    .a-btn {
+      width: 55px; height: 55px; border-radius: 50%;
+      background: rgba(255,255,255,0.25); border: 2px solid rgba(255,255,255,0.5);
+      color: #fff; font-size: 16px; font-weight: bold;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .a-btn:active { background: rgba(255,57,72,0.8); }
+
+    /* SYSTEM BUTTONS (Coin & Start) */
+    .system-btns {
+      position: absolute; bottom: 15px; left: 50%;
+      transform: translateX(-50%); display: flex; gap: 12px;
+    }
+    .s-btn {
+      background: rgba(0,0,0,0.6); border: 1px solid #777;
+      color: #fff; padding: 6px 14px; border-radius: 5px;
+      font-size: 12px; font-weight: bold;
+    }
+    .s-btn:active { background: #28a745; }
   </style>
 </head>
 <body>
@@ -67,20 +118,42 @@
     <button class="btn-m" id="host-btn" onclick="initHost()">👑 Host Game (P1)</button>
     <input type="text" id="room-input" class="room-input" placeholder="Room Code">
     <button class="btn-m btn-join" id="join-btn" onclick="initJoin()">🎮 Join Game (P2)</button>
-    <div id="status-msg">Click Host or enter code to Join</div>
+    <div id="status-msg">Click Host (Device 1) or enter code to Join (Device 2)</div>
   </div>
 
   <div id="game-container">
     <div id="game"></div>
     <video id="client-view" autoplay playsinline></video>
+
+    <!-- Player 2 Touch Controller Overlay -->
+    <div id="p2-gamepad">
+      <!-- D-Pad -->
+      <div class="dpad">
+        <div class="d-btn d-up gp-touch" data-key="ArrowUp">▲</div>
+        <div class="d-btn d-down gp-touch" data-key="ArrowDown">▼</div>
+        <div class="d-btn d-left gp-touch" data-key="ArrowLeft">◀</div>
+        <div class="d-btn d-right gp-touch" data-key="ArrowRight">▶</div>
+      </div>
+
+      <!-- System (Coin & Start) -->
+      <div class="system-btns">
+        <button class="s-btn gp-touch" data-key="Digit6">INSERT COIN</button>
+        <button class="s-btn gp-touch" data-key="Digit2">START 2P</button>
+      </div>
+
+      <!-- Action (Attack & Jump) -->
+      <div class="action-btns">
+        <div class="a-btn gp-touch" data-key="KeyJ">JUMP</div>
+        <div class="a-btn gp-touch" data-key="KeyH" style="background:rgba(255,57,72,0.4);">ATTACK</div>
+      </div>
+    </div>
   </div>
 
   <script>
     let peer = null;
     let conn = null;
-    let isHost = false;
 
-    // EmulatorJS config
+    // EmulatorJS Settings
     window.EJS_player = '#game';
     window.EJS_core = 'arcade';
     window.EJS_gameName = 'dino';
@@ -95,8 +168,7 @@
       
       peer = new Peer(code);
       peer.on('open', (id) => {
-        isHost = true;
-        document.getElementById('status-msg').innerHTML = 'Room Created! Code: <b style="color:#00ff99;font-size:14px;">' + id + '</b> (Share with Player 2)';
+        document.getElementById('status-msg').innerHTML = 'Room Code: <b style="color:#00ff99;font-size:14px;">' + id + '</b>';
         document.getElementById('host-btn').style.display = 'none';
         document.getElementById('join-btn').style.display = 'none';
         document.getElementById('room-input').style.display = 'none';
@@ -104,23 +176,23 @@
 
       peer.on('connection', (c) => {
         conn = c;
-        document.getElementById('status-msg').innerText = 'Player 2 Connected! Ready to play.';
+        document.getElementById('status-msg').innerText = 'Player 2 Connected! P2 can insert coin to join.';
         
-        // Listen for Player 2 input keys
+        // Handle Player 2 Input Events
         conn.on('data', (data) => {
-          if (data && data.type === 'keydown') {
-            simulateKey(data.key, true);
-          } else if (data && data.type === 'keyup') {
-            simulateKey(data.key, false);
+          if (data && data.key) {
+            triggerP2Input(data.key, data.isPress);
           }
         });
 
-        // Stream canvas video to Player 2
-        const canvas = document.querySelector('#game canvas');
-        if (canvas && canvas.captureStream) {
-          const stream = canvas.captureStream(30);
-          peer.call(conn.peer, stream);
-        }
+        // Capture Host canvas video stream & send to P2
+        setTimeout(() => {
+          const canvas = document.querySelector('#game canvas');
+          if (canvas && canvas.captureStream) {
+            const stream = canvas.captureStream(30);
+            peer.call(conn.peer, stream);
+          }
+        }, 1500);
       });
     }
 
@@ -137,18 +209,19 @@
       peer.on('open', () => {
         conn = peer.connect(targetRoom);
         conn.on('open', () => {
-          document.getElementById('status-msg').innerText = 'Connected! You are Player 2 (Controls active).';
+          document.getElementById('status-msg').innerText = 'Connected as Player 2! Tap "INSERT COIN" & "START 2P" to enter.';
           document.getElementById('host-btn').style.display = 'none';
           document.getElementById('join-btn').style.display = 'none';
           document.getElementById('room-input').style.display = 'none';
           
-          // Switch to video stream view for client
+          // Switch to video stream view & show Player 2 Gamepad
           document.getElementById('game').style.display = 'none';
           document.getElementById('client-view').style.display = 'block';
+          document.getElementById('p2-gamepad').style.display = 'block';
+          setupP2Controller();
         });
       });
 
-      // Receive Host video stream
       peer.on('call', (call) => {
         call.answer();
         call.on('stream', (remoteStream) => {
@@ -159,27 +232,47 @@
       });
     }
 
-    // Simulate Keyboard events for Player 2 into Emulator
-    function simulateKey(code, isPress) {
+    // Player 2 Button Event Handlers
+    function setupP2Controller() {
+      document.querySelectorAll('.gp-touch').forEach(el => {
+        const key = el.getAttribute('data-key');
+        
+        el.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          if (conn && conn.open) conn.send({ key: key, isPress: true });
+        });
+
+        el.addEventListener('touchend', (e) => {
+          e.preventDefault();
+          if (conn && conn.open) conn.send({ key: key, isPress: false });
+        });
+
+        el.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          if (conn && conn.open) conn.send({ key: key, isPress: true });
+        });
+
+        el.addEventListener('mouseup', (e) => {
+          e.preventDefault();
+          if (conn && conn.open) conn.send({ key: key, isPress: false });
+        });
+      });
+    }
+
+    // Host triggers P2 input in Emulator
+    function triggerP2Input(key, isPress) {
       const eventType = isPress ? 'keydown' : 'keyup';
       const event = new KeyboardEvent(eventType, {
         bubbles: true,
         cancelable: true,
-        code: code,
-        keyCode: getKeyCode(code)
+        key: key,
+        code: key
       });
       window.dispatchEvent(event);
       document.dispatchEvent(event);
       const canvas = document.querySelector('#game canvas');
       if (canvas) canvas.dispatchEvent(event);
     }
-
-    function getKeyCode(code) {
-      const map = { 'KeyS': 83, 'KeyX': 88, 'KeyZ': 90, 'KeyA': 65, 'Digit6': 54, 'Digit2': 50 };
-      return map[code] || 0;
-    }
   </script>
   <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
 
-</body>
-</html>
