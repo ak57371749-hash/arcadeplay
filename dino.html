@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadillacs &amp; Dinosaurs - ArcadePlay</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      background-color: #080a12;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: Arial, sans-serif;
+    }
+    header {
+      width: 100%;
+      padding: 10px 16px;
+      background: #111522;
+      border-bottom: 1px solid #252938;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 10;
+    }
+    header a {
+      color: #ff3948;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    header span {
+      color: #fff;
+      font-size: 14px;
+    }
+    #game-container {
+      width: 100%;
+      height: 100%;
+      padding-top: 45px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #game {
+      width: 100%;
+      height: 100%;
+      max-width: 960px;
+      max-height: 720px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <span>Cadillacs &amp; Dinosaurs</span>
+    <a href="index.html">← Back to Arcade</a>
+  </header>
+
+  <div id="game-container">
+    <div id="game"></div>
+  </div>
+
+  <script>
+    window.EJS_player = '#game';
+    window.EJS_core = 'arcade';
+    window.EJS_gameName = 'dino';
+    window.EJS_gameUrl = 'dino.zip';
+    window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+    window.EJS_startOnLoaded = true;
+  </script>
+  <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
+
+</body>
+</html>
