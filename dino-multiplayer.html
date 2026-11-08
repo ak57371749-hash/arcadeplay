@@ -96,7 +96,7 @@
       z-index: 10;
     }
 
-    /* Player 2 On-Screen Touch Controls */
+    /* Isolated Player 2 Gamepad */
     #p2-controls {
       display: none;
       position: absolute;
@@ -112,21 +112,21 @@
       touch-action: none;
     }
 
-    /* D-PAD (Left) */
+    /* D-PAD */
     .dpad-container {
       position: absolute;
-      left: 14px;
-      bottom: 14px;
-      width: 144px;
-      height: 144px;
+      left: 16px;
+      bottom: 16px;
+      width: 138px;
+      height: 138px;
     }
     .dpad-btn {
       position: absolute;
-      width: 46px;
-      height: 46px;
-      background: rgba(255, 255, 255, 0.22);
+      width: 44px;
+      height: 44px;
+      background: rgba(255, 255, 255, 0.25);
       border: 2px solid rgba(255, 255, 255, 0.5);
-      border-radius: 10px;
+      border-radius: 8px;
       color: #fff;
       font-size: 20px;
       display: flex;
@@ -134,22 +134,22 @@
       justify-content: center;
     }
     .dpad-btn.active { background: rgba(255, 57, 72, 0.85); }
-    .btn-up { top: 0; left: 49px; }
-    .btn-down { bottom: 0; left: 49px; }
-    .btn-left { top: 49px; left: 0; }
-    .btn-right { top: 49px; right: 0; }
+    .btn-up { top: 0; left: 47px; }
+    .btn-down { bottom: 0; left: 47px; }
+    .btn-left { top: 47px; left: 0; }
+    .btn-right { top: 47px; right: 0; }
 
-    /* ACTION BUTTONS (Right) */
+    /* ACTION BUTTONS */
     .action-container {
       position: absolute;
-      right: 16px;
-      bottom: 20px;
+      right: 18px;
+      bottom: 22px;
       display: flex;
       gap: 16px;
     }
     .act-circle {
-      width: 64px;
-      height: 64px;
+      width: 62px;
+      height: 62px;
       border-radius: 50%;
       background: rgba(255, 255, 255, 0.25);
       border: 2px solid rgba(255, 255, 255, 0.5);
@@ -161,22 +161,22 @@
       justify-content: center;
     }
     .act-circle.att {
-      background: rgba(255, 57, 72, 0.5);
+      background: rgba(255, 57, 72, 0.55);
       border-color: #ff3948;
     }
     .act-circle.active { transform: scale(0.92); filter: brightness(1.4); }
 
-    /* COIN & START (Top Center) */
+    /* COIN & START */
     .sys-container {
       position: absolute;
       top: 10px;
       left: 50%;
       transform: translateX(-50%);
       display: flex;
-      gap: 12px;
+      gap: 14px;
     }
     .sys-pill {
-      background: rgba(17, 21, 34, 0.85);
+      background: rgba(17, 21, 34, 0.9);
       border: 1px solid #ff3948;
       color: #fff;
       padding: 6px 14px;
@@ -208,23 +208,23 @@
     <div id="game"></div>
     <video id="p2-screen" autoplay playsinline muted></video>
 
-    <!-- Player 2 Touch Gamepad with Multi-touch tracking -->
+    <!-- Player 2 Gamepad -->
     <div id="p2-controls">
       <div class="dpad-container">
-        <div class="dpad-btn btn-up touch-btn" data-key="p2_up">▲</div>
-        <div class="dpad-btn btn-down touch-btn" data-key="p2_down">▼</div>
-        <div class="dpad-btn btn-left touch-btn" data-key="p2_left">◀</div>
-        <div class="dpad-btn btn-right touch-btn" data-key="p2_right">▶</div>
+        <div class="dpad-btn btn-up touch-btn" data-btn="12">▲</div>
+        <div class="dpad-btn btn-down touch-btn" data-btn="13">▼</div>
+        <div class="dpad-btn btn-left touch-btn" data-key="14">◀</div>
+        <div class="dpad-btn btn-right touch-btn" data-btn="15">▶</div>
       </div>
 
       <div class="sys-container">
-        <button class="sys-pill touch-btn" data-key="p2_coin">🪙 INSERT COIN</button>
-        <button class="sys-pill touch-btn" data-key="p2_start">START 2P</button>
+        <button class="sys-pill touch-btn" data-btn="8">🪙 INSERT COIN</button>
+        <button class="sys-pill touch-btn" data-btn="9">START 2P</button>
       </div>
 
       <div class="action-container">
-        <div class="act-circle touch-btn" data-key="p2_jump">JUMP</div>
-        <div class="act-circle att touch-btn" data-key="p2_attack">ATTACK</div>
+        <div class="act-circle touch-btn" data-btn="0">JUMP</div>
+        <div class="act-circle att touch-btn" data-btn="1">ATTACK</div>
       </div>
     </div>
   </div>
@@ -232,7 +232,6 @@
   <!-- PeerJS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
 
-  <!-- EmulatorJS -->
   <script>
     function toggleFullScreen() {
       const el = document.getElementById('viewport');
@@ -255,6 +254,12 @@
     let peer = null;
     let conn = null;
 
+    // Virtual Gamepad State for Player 2 (Index 1)
+    const p2GamepadState = {
+      buttons: new Array(16).fill(0),
+      axes: [0, 0, 0, 0]
+    };
+
     // 1. Host Game (Device 1)
     function startHost() {
       if (typeof Peer === 'undefined') {
@@ -270,17 +275,16 @@
         hideRoomBar();
       });
 
-      peer.on('error', (err) => {
-        document.getElementById('status-text').innerText = 'Error: ' + err.type;
-      });
-
       peer.on('connection', (c) => {
         conn = c;
         document.getElementById('status-text').innerText = 'Player 2 Connected! Ready.';
 
+        // Hook virtual gamepad for Player 2
+        setupP2VirtualGamepadHook();
+
         conn.on('data', (data) => {
-          if (data && data.key) {
-            triggerP2Input(data.key, data.down);
+          if (data && data.btn !== undefined) {
+            updateP2Button(parseInt(data.btn), data.down);
           }
         });
 
@@ -319,7 +323,7 @@
           document.getElementById('p2-screen').style.display = 'block';
           document.getElementById('p2-controls').style.display = 'block';
 
-          setupMultiTouchControls();
+          setupButtonHandlers();
         });
       });
 
@@ -339,134 +343,80 @@
       document.getElementById('room-code').style.display = 'none';
     }
 
-    // Multi-touch tracking to stop key mix-up
-    function setupMultiTouchControls() {
+    // Touch Event Handlers with single button isolation
+    function setupButtonHandlers() {
       const buttons = document.querySelectorAll('.touch-btn');
 
       buttons.forEach(btn => {
-        const key = btn.getAttribute('data-key');
+        const btnId = btn.getAttribute('data-btn') || btn.getAttribute('data-key');
 
-        const press = (isDown) => {
+        const sendBtn = (isDown) => {
           if (isDown) btn.classList.add('active');
           else btn.classList.remove('active');
 
           if (conn && conn.open) {
-            conn.send({ key: key, down: isDown });
+            conn.send({ btn: btnId, down: isDown });
           }
         };
 
         btn.addEventListener('touchstart', (e) => {
           e.preventDefault();
-          press(true);
+          e.stopPropagation();
+          sendBtn(true);
         }, { passive: false });
 
         btn.addEventListener('touchend', (e) => {
           e.preventDefault();
-          press(false);
+          e.stopPropagation();
+          sendBtn(false);
         }, { passive: false });
 
         btn.addEventListener('touchcancel', (e) => {
           e.preventDefault();
-          press(false);
+          e.stopPropagation();
+          sendBtn(false);
         }, { passive: false });
-
-        btn.addEventListener('mousedown', (e) => {
-          e.preventDefault();
-          press(true);
-        });
-
-        btn.addEventListener('mouseup', (e) => {
-          e.preventDefault();
-          press(false);
-        });
       });
     }
 
-    // Direct isolated Player 2 Arcade mapping into Emulator core
-    function triggerP2Input(action, isDown) {
-      // Clean isolated RetroArch/MAME arcade P2 keyboard maps
-      const codeMap = {
-        'p2_coin':   { code: 'Digit6', keyCode: 54, key: '6' },
-        'p2_start':  { code: 'Digit2', keyCode: 50, key: '2' },
-        'p2_up':     { code: 'KeyR',   keyCode: 82, key: 'r' },
-        'p2_down':   { code: 'KeyF',   keyCode: 70, key: 'f' },
-        'p2_left':   { code: 'KeyD',   keyCode: 68, key: 'd' },
-        'p2_right':  { code: 'KeyG',   keyCode: 71, key: 'g' },
-        'p2_attack': { code: 'KeyA',   keyCode: 65, key: 'a' },
-        'p2_jump':   { code: 'KeyS',   keyCode: 83, key: 's' }
-      };
-
-      const map = codeMap[action];
-      if (!map) return;
-
-      const evtType = isDown ? 'keydown' : 'keyup';
-      const event = new KeyboardEvent(evtType, {
-        bubbles: true,
-        cancelable: true,
-        key: map.key,
-        code: map.code,
-        keyCode: map.keyCode,
-        which: map.keyCode
-      });
-
-      window.dispatchEvent(event);
-      document.dispatchEvent(event);
-      const canvas = document.querySelector('#game canvas');
-      if (canvas) canvas.dispatchEvent(event);
-    }
-  </script>
-  <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
-
-</body>
-</html>
-});
+    // Host updates Player 2 state
+    function updateP2Button(buttonIndex, isDown) {
+      if (p2GamepadState.buttons[buttonIndex] !== undefined) {
+        p2GamepadState.buttons[buttonIndex] = isDown ? 1 : 0;
+      }
+      // D-Pad to axes fallback
+      if (buttonIndex === 14) p2GamepadState.axes[0] = isDown ? -1 : 0; // Left
+      if (buttonIndex === 15) p2GamepadState.axes[0] = isDown ? 1 : 0;  // Right
+      if (buttonIndex === 12) p2GamepadState.axes[1] = isDown ? -1 : 0; // Up
+      if (buttonIndex === 13) p2GamepadState.axes[1] = isDown ? 1 : 0;  // Down
     }
 
-    function hideRoomBar() {
-      document.getElementById('host-btn').style.display = 'none';
-      document.getElementById('join-btn').style.display = 'none';
-      document.getElementById('room-code').style.display = 'none';
-    }
+    // Overrides navigator.getGamepads so emulator core gets real 2nd gamepad
+    function setupP2VirtualGamepadHook() {
+      const originalGetGamepads = navigator.getGamepads ? navigator.getGamepads.bind(navigator) : () => [];
 
-    function bindP2Controls() {
-      document.querySelectorAll('.touch-btn').forEach(btn => {
-        const key = btn.getAttribute('data-key');
-        const send = (isDown) => {
-          if (conn && conn.open) conn.send({ key: key, down: isDown });
+      navigator.getGamepads = function() {
+        const pads = Array.from(originalGetGamepads() || []);
+        
+        // Slot 1 (Player 2)
+        pads[1] = {
+          id: 'Virtual Player 2 Arcade Controller',
+          index: 1,
+          connected: true,
+          timestamp: performance.now(),
+          mapping: 'standard',
+          axes: p2GamepadState.axes,
+          buttons: p2GamepadState.buttons.map(val => ({
+            pressed: val === 1,
+            value: val
+          }))
         };
 
-        btn.addEventListener('touchstart', (e) => { e.preventDefault(); send(true); }, { passive: false });
-        btn.addEventListener('touchend', (e) => { e.preventDefault(); send(false); }, { passive: false });
-        btn.addEventListener('mousedown', (e) => { e.preventDefault(); send(true); });
-        btn.addEventListener('mouseup', (e) => { e.preventDefault(); send(false); });
-      });
-    }
-
-    // Injects Player 2 keys into Host Emulator
-    function injectKeyToHost(code, isDown) {
-      const p2Map = {
-        'Digit6': 'Digit6', // Coin 2
-        'Digit2': 'Digit2', // Start 2
-        'ArrowUp': 'KeyR',
-        'ArrowDown': 'KeyF',
-        'ArrowLeft': 'KeyD',
-        'ArrowRight': 'KeyG',
-        'KeyA': 'KeyA',     // Attack 2
-        'KeyS': 'KeyS'      // Jump 2
+        return pads;
       };
-
-      const mapped = p2Map[code] || code;
-      const evt = new KeyboardEvent(isDown ? 'keydown' : 'keyup', {
-        bubbles: true, cancelable: true, code: mapped, key: mapped
-      });
-      window.dispatchEvent(evt);
-      document.dispatchEvent(evt);
-      const canvas = document.querySelector('#game canvas');
-      if (canvas) canvas.dispatchEvent(evt);
     }
   </script>
 
-  <!-- Static Loader: Game will always load immediately -->
   <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
 
 </body>
